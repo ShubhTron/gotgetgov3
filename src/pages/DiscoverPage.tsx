@@ -157,7 +157,7 @@ export function DiscoverPage() {
             myLevel, sp.self_assessed_level, dist, myAvail,
             sp.availability ?? 'flexible', user.id, p.id,
           ),
-          recentMatches: matchCache[p.id] ?? [],
+          recentMatches: [],
         });
       }
     }
@@ -165,7 +165,7 @@ export function DiscoverPage() {
     result.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
     setPlayers(result);
     setLoading(false);
-  }, [user, profile, sport, distKm, skill, matchCache]);
+  }, [user, profile, sport, distKm, skill]);
 
   useEffect(() => { fetchPlayers(); }, [fetchPlayers]);
 

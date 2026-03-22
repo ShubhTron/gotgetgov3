@@ -10,7 +10,8 @@ import { MePage } from './pages/MePage';
 
 function Shell() {
   const { profile } = useAuth();
-  const { theme, toggle } = useTheme();
+  const dbTheme = (profile as any)?.dark_mode === true ? 'dark' as const : (profile as any)?.dark_mode === false ? 'light' as const : null;
+  const { theme, toggle } = useTheme('light', dbTheme);
   const [activeTab, setActiveTab] = useState<TabId>('discover');
 
   const pageMap: Record<TabId, ReactNode> = {

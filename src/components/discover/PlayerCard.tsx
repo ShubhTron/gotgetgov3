@@ -104,7 +104,7 @@ export function PlayerCard({ player, scrollable = false }: PlayerCardProps) {
               lineHeight: 'var(--leading-tight)',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {player.fullName.split(' ')[0]}
+              {player.fullName}
             </div>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 4,

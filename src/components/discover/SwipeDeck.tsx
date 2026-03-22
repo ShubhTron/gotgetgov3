@@ -27,11 +27,13 @@ function DraggableCard({
   onSwipeLeft:  (id: string) => void;
   isBack: boolean;
 }) {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-15, 15]);
 
-  const connectOpacity = useTransform(x, [0, 120], [0, 1]);
-  const passOpacity    = useTransform(x, [-120, 0], [1, 0]);
+  const threshold = window.innerWidth * 0.4;
+  const connectOpacity = useTransform(x, [0, threshold], [0, 1]);
+  const passOpacity    = useTransform(x, [-threshold, 0], [1, 0]);
 
   const handleDragEnd = useCallback((_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
     const screenW = window.innerWidth;
@@ -51,6 +53,7 @@ function DraggableCard({
         position: 'absolute', inset: '10px 14px 10px',
         transform: 'scale(0.94) translateY(18px)',
         zIndex: 1, pointerEvents: 'none',
+        filter: isDark ? 'brightness(0.80)' : undefined,
       }}>
         <PlayerCard player={player} scrollable={false} />
       </div>
