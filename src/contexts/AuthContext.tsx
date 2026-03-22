@@ -28,6 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        // After confirming session — update last_seen
+        supabase
+          .from('profiles')
+          .update({ last_seen: new Date().toISOString() })
+          .eq('id', session.user.id)
+          .then(() => {}); // fire-and-forget
         fetchProfile(session.user.id);
       } else {
         setLoading(false);
@@ -40,6 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        // After confirming session — update last_seen
+        supabase
+          .from('profiles')
+          .update({ last_seen: new Date().toISOString() })
+          .eq('id', session.user.id)
+          .then(() => {}); // fire-and-forget
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
