@@ -50,7 +50,7 @@ function DraggableCard({
   if (isBack) {
     return (
       <div style={{
-        position: 'absolute', inset: '10px 14px 10px',
+        position: 'absolute', top: 10, right: 14, bottom: 10, left: 14,
         transform: 'scale(0.94) translateY(18px)',
         zIndex: 1, pointerEvents: 'none',
         filter: isDark ? 'brightness(0.80)' : undefined,
@@ -63,13 +63,14 @@ function DraggableCard({
   return (
     <motion.div
       style={{
-        position: 'absolute', inset: '10px 14px 10px',
+        position: 'absolute', top: 10, right: 14, bottom: 10, left: 14,
         zIndex: 2, x, rotate,
         cursor: 'grab',
+        touchAction: 'pan-y',
       }}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.8}
+      dragElastic={0.9}
       onDragEnd={handleDragEnd}
     >
       {/* CONNECT stamp */}
