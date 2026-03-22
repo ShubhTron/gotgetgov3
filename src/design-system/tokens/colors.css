@@ -1,0 +1,35 @@
+[data-theme="light"] {
+  --color-bg:      #F4F3EF;
+  --color-surf:    #FFFFFF;
+  --color-surf-2:  #F0EFEB;
+  --color-t1:      #14120E;
+  --color-t2:      #8A8880;
+  --color-t3:      #C2C0B8;
+  --color-bdr:     rgba(20,18,14,0.09);
+  --color-bdr-s:   rgba(20,18,14,0.14);
+  --color-acc:     #16D46A;
+  --color-acc-dk:  #0D9E50;
+  --color-acc-bg:  rgba(22,212,106,0.10);
+  --color-red:     #E84040;
+  --color-red-bg:  rgba(232,64,64,0.07);
+  --color-tab-off: #C0BEB6;
+  --color-tab-on:  #14120E;
+}
+
+[data-theme="dark"] {
+  --color-bg:      #111009;
+  --color-surf:    #1D1C15;
+  --color-surf-2:  #242318;
+  --color-t1:      #EDECEA;
+  --color-t2:      #888680;
+  --color-t3:      #4A4844;
+  --color-bdr:     rgba(237,236,234,0.08);
+  --color-bdr-s:   rgba(237,236,234,0.13);
+  --color-acc:     #16D46A;
+  --color-acc-dk:  #16D46A;
+  --color-acc-bg:  rgba(22,212,106,0.10);
+  --color-red:     #F06060;
+  --color-red-bg:  rgba(240,96,96,0.08);
+  --color-tab-off: #4A4844;
+  --color-tab-on:  #EDECEA;
+}
