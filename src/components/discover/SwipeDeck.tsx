@@ -66,11 +66,10 @@ function DraggableCard({
         position: 'absolute', top: 10, right: 14, bottom: 10, left: 14,
         zIndex: 2, x, rotate,
         cursor: 'grab',
-        touchAction: 'pan-y',
+        touchAction: 'none',
       }}
       drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.9}
+      dragElastic={0.15}
       onDragEnd={handleDragEnd}
     >
       {/* CONNECT stamp */}

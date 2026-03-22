@@ -38,7 +38,7 @@ export function Header({ userAvatarUrl, userName, theme, onThemeToggle }: Header
         lineHeight: 1,
         userSelect: 'none',
       }}>
-        GotGet<em style={{ fontStyle: 'italic', color: 'var(--color-acc-dk)' }}>Go</em>
+        Got<em style={{ fontStyle: 'italic', color: 'var(--color-acc-dk)' }}>Get</em>Go
       </div>
 
       {/* Right icons */}
