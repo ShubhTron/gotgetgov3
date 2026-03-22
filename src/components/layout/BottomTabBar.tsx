@@ -10,7 +10,7 @@ interface BottomTabBarProps {
 const TABS = [
   { id: 'discover' as TabId, label: 'Discover', Icon: IconCompass },
   { id: 'play'     as TabId, label: 'Play',     Icon: IconPlay },
-  { id: 'connect'  as TabId, label: 'Connect',  Icon: IconMessageCircle },
+  { id: 'connect'  as TabId, label: 'Circles',   Icon: IconMessageCircle },
   { id: 'me'       as TabId, label: 'Me',        Icon: IconUser },
 ];
 
