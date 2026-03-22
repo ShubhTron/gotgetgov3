@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface DividerProps { spacing?: 'sm' | 'md'; }
 
 export function Divider({ spacing = 'md' }: DividerProps) {

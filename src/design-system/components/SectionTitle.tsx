@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface SectionTitleProps { children: string; }
 
 export function SectionTitle({ children }: SectionTitleProps) {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { IconCompass, IconPlay, IconPlus, IconMessageCircle, IconUser } from '../../design-system';
 
 export type TabId = 'discover' | 'play' | 'connect' | 'me';

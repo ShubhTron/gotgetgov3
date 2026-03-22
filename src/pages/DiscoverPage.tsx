@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { haversineKm } from '../lib/haversine';
@@ -88,8 +88,8 @@ export function DiscoverPage() {
         .eq('sport', sport === 'all' ? 'tennis' : sport),
     ]);
 
-    const profiles      = profilesRes.data ?? [];
-    const sportProfiles = sportProfilesRes.data ?? [];
+    const profiles      = (profilesRes.data ?? []) as any[];
+    const sportProfiles = (sportProfilesRes.data ?? []) as any[];
     const userClubs     = clubsRes.data ?? [];
     const swiped        = new Set((swipedRes.data ?? []).map((r: any) => r.target_user_id));
     setSwipedIds(swiped);
@@ -186,8 +186,9 @@ export function DiscoverPage() {
     const topId = players.find(p => !swipedIds.has(p.id))?.id;
     if (!topId || matchCache[topId]) return;
 
-    supabase.rpc('get_player_recent_matches', { p_player_id: topId, p_limit: 5 })
-      .then(({ data }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.rpc as any)('get_player_recent_matches', { p_player_id: topId, p_limit: 5 })
+      .then(({ data }: { data: unknown }) => {
         if (!data) return;
         const records: MatchRecord[] = (data as any[]).map((row: any) => ({
           id: row.id,
@@ -205,7 +206,7 @@ export function DiscoverPage() {
     const player = players.find(p => p.id === id);
     if (!player || !user) return;
     setLastSwipe({ id, direction: 'right' });
-    await supabase.from('swipe_matches').upsert({
+    await (supabase.from('swipe_matches') as any).upsert({
       user_id: user.id, target_user_id: id, sport: player.sport, direction: 'right',
     }, { onConflict: 'user_id,target_user_id,sport' });
   }, [players, user]);
@@ -214,7 +215,7 @@ export function DiscoverPage() {
     const player = players.find(p => p.id === id);
     if (!player || !user) return;
     setLastSwipe({ id, direction: 'left' });
-    await supabase.from('swipe_matches').upsert({
+    await (supabase.from('swipe_matches') as any).upsert({
       user_id: user.id, target_user_id: id, sport: player.sport, direction: 'left',
     }, { onConflict: 'user_id,target_user_id,sport' });
   }, [players, user]);
@@ -243,7 +244,7 @@ export function DiscoverPage() {
         .delete().eq('user_id', user.id).eq('target_user_id', id).eq('sport', topPlayer.sport);
     } else {
       setFavoriteIds(prev => new Set([...prev, id]));
-      await supabase.from('favorites')
+      await (supabase.from('favorites') as any)
         .insert({ user_id: user.id, target_user_id: id, sport: topPlayer.sport });
     }
   }, [players, swipedIds, favoriteIds, user]);

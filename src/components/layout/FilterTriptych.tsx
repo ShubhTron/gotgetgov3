@@ -1,4 +1,3 @@
-import React from 'react';
 import { IconChevronDown } from '../../design-system';
 import type { FilterSport, FilterSkill } from '../../types/discover';
 

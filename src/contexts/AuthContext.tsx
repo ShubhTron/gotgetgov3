@@ -29,8 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         // After confirming session — update last_seen
-        supabase
-          .from('profiles')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from('profiles') as any)
           .update({ last_seen: new Date().toISOString() })
           .eq('id', session.user.id)
           .then(() => {}); // fire-and-forget
@@ -47,8 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         // After confirming session — update last_seen
-        supabase
-          .from('profiles')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from('profiles') as any)
           .update({ last_seen: new Date().toISOString() })
           .eq('id', session.user.id)
           .then(() => {}); // fire-and-forget
@@ -117,8 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function updateProfile(updates: Partial<Profile>) {
     if (!user) return { error: new Error('Not authenticated') };
 
-    const { error } = await supabase
-      .from('profiles')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from('profiles') as any)
       .update(updates)
       .eq('id', user.id);
 

@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface MatchRowProps {
   result: 'W' | 'L';
   opponentName: string;

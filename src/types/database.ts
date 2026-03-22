@@ -109,6 +109,7 @@ export interface Database {
           dark_mode: boolean;
           push_notifications: boolean;
           email_notifications: boolean;
+          last_seen: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -128,6 +129,7 @@ export interface Database {
           dark_mode?: boolean;
           push_notifications?: boolean;
           email_notifications?: boolean;
+          last_seen?: string | null;
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
       };
@@ -141,6 +143,8 @@ export interface Database {
           official_rating_system: string | null;
           play_style: string | null;
           preferred_format: MatchFormat;
+          preferred_time: string | null;
+          availability: string | null;
           years_playing: number;
           created_at: string;
           updated_at: string;
@@ -154,6 +158,8 @@ export interface Database {
           official_rating_system?: string | null;
           play_style?: string | null;
           preferred_format?: MatchFormat;
+          preferred_time?: string | null;
+          availability?: string | null;
           years_playing?: number;
         };
         Update: Partial<Database['public']['Tables']['user_sport_profiles']['Insert']>;
@@ -719,6 +725,22 @@ export interface Database {
           metadata?: Record<string, unknown>;
         };
         Update: Partial<Database['public']['Tables']['discovery_mode_analytics']['Insert']>;
+      };
+      favorites: {
+        Row: {
+          id: string;
+          user_id: string;
+          target_user_id: string;
+          sport: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          target_user_id: string;
+          sport: string;
+        };
+        Update: Partial<Database['public']['Tables']['favorites']['Insert']>;
       };
     };
   };

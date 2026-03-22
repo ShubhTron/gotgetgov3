@@ -1,4 +1,3 @@
-import React from 'react';
 import { Avatar, Chip, SectionTitle, Divider, MatchRow } from '../../design-system';
 import { IconPin, IconCalendar, IconZap, IconClock, IconArrowRight } from '../../design-system';
 import type { DiscoverPlayer } from '../../types/discover';
