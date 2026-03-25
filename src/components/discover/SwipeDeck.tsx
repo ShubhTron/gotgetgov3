@@ -9,6 +9,7 @@ interface SwipeDeckProps {
   onSwipeRight: (id: string) => void;
   onSwipeLeft: (id: string) => void;
   undoId?: string | null;   // when set, re-adds this player to top
+  triggerSwipe?: { id: string; direction: 'left' | 'right' } | null;
 }
 
 export interface SwipeDeckHandle {
@@ -109,7 +110,7 @@ function DraggableCard({
   );
 }
 
-export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId }: SwipeDeckProps) {
+export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerSwipe }: SwipeDeckProps) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   // Undo: remove from dismissed when undoId changes
@@ -122,6 +123,13 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId }: SwipeD
       });
     }
   }, [undoId]);
+
+  // Handle programmatic swipes from buttons
+  useEffect(() => {
+    if (triggerSwipe) {
+      setDismissed(prev => new Set([...prev, triggerSwipe.id]));
+    }
+  }, [triggerSwipe]);
 
   const handleSwipeRight = useCallback((id: string) => {
     setDismissed(prev => new Set([...prev, id]));

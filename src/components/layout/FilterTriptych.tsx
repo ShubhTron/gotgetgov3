@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { IconChevronDown } from '../../design-system';
 import type { FilterSport, FilterSkill } from '../../types/discover';
+import { FilterModal } from './FilterModal';
 
 interface FilterTriptychProps {
   sport: FilterSport;
@@ -54,39 +56,56 @@ export function FilterTriptych({
   sport, distanceKm, skill,
   onSportChange, onDistanceChange, onSkillChange,
 }: FilterTriptychProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'sport' | 'distance' | 'skill' | null>(null);
+
   const SPORTS: FilterSport[] = ['all', 'tennis', 'padel', 'squash'];
   const DISTANCES = [10, 25, 40, 80];
   const SKILLS: FilterSkill[] = ['any', 'beginner', 'intermediate', 'advanced', 'expert'];
 
-  const cycleSport = () => {
-    const i = SPORTS.indexOf(sport);
-    onSportChange(SPORTS[(i + 1) % SPORTS.length]);
+  const openFilter = (filter: 'sport' | 'distance' | 'skill') => {
+    setActiveFilter(filter);
+    setIsModalOpen(true);
   };
-  const cycleDistance = () => {
-    const i = DISTANCES.indexOf(distanceKm);
-    onDistanceChange(DISTANCES[(i + 1) % DISTANCES.length]);
-  };
-  const cycleSkill = () => {
-    const i = SKILLS.indexOf(skill);
-    onSkillChange(SKILLS[(i + 1) % SKILLS.length]);
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setActiveFilter(null);
   };
 
   const distLabel = `${Math.round(distanceKm * 0.621)} miles`;
 
   return (
-    <div style={{
-      height: 68, flexShrink: 0,
-      display: 'flex', alignItems: 'stretch',
-      borderTop: '1px solid var(--color-bdr)',
-      borderBottom: '1px solid var(--color-bdr)',
-      background: 'var(--color-bg)',
-      position: 'relative', zIndex: 10,
-    }}>
-      <Col label="FINDING" value={SPORT_LABEL[sport] ?? sport} onClick={cycleSport} />
-      <div style={{ width: 1, background: 'var(--color-bdr)', margin: '14px 0' }} />
-      <Col label="WITHIN"  value={distLabel} onClick={cycleDistance} />
-      <div style={{ width: 1, background: 'var(--color-bdr)', margin: '14px 0' }} />
-      <Col label="SKILL"   value={SKILL_LABEL[skill] ?? skill} onClick={cycleSkill} />
-    </div>
+    <>
+      <div style={{
+        height: 68, flexShrink: 0,
+        display: 'flex', alignItems: 'stretch',
+        borderTop: '1px solid var(--color-bdr)',
+        borderBottom: '1px solid var(--color-bdr)',
+        background: 'var(--color-bg)',
+        position: 'relative', zIndex: 10,
+      }}>
+        <Col label="FINDING" value={SPORT_LABEL[sport] ?? sport} onClick={() => openFilter('sport')} />
+        <div style={{ width: 1, background: 'var(--color-bdr)', margin: '14px 0' }} />
+        <Col label="WITHIN"  value={distLabel} onClick={() => openFilter('distance')} />
+        <div style={{ width: 1, background: 'var(--color-bdr)', margin: '14px 0' }} />
+        <Col label="SKILL"   value={SKILL_LABEL[skill] ?? skill} onClick={() => openFilter('skill')} />
+      </div>
+
+      <FilterModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        activeFilter={activeFilter}
+        sport={sport}
+        distanceKm={distanceKm}
+        skill={skill}
+        onSportChange={onSportChange}
+        onDistanceChange={onDistanceChange}
+        onSkillChange={onSkillChange}
+        sports={SPORTS}
+        distances={DISTANCES}
+        skills={SKILLS}
+      />
+    </>
   );
 }

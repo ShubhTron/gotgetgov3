@@ -1,3 +1,74 @@
+/* ─── Import design tokens (CSS custom properties) ───────────────────────── */
+@import "./design-system/tokens/index.css";
+
+/* ─── Tailwind v4 ─────────────────────────────────────────────────────────── */
+@import "tailwindcss";
+
+/* ─── Dark mode via data-theme attribute (v3 uses data-theme, not .dark) ──── */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* ─── Bridge v3 token vars → Tailwind color utilities ────────────────────── */
+/*     `inline` means Tailwind will output var(--color-acc) directly          */
+/*     instead of creating an intermediate CSS custom property                 */
+@theme inline {
+  /* Semantic colors */
+  --color-background:           var(--color-bg);
+  --color-foreground:           var(--color-t1);
+  --color-card:                 var(--color-surf);
+  --color-card-foreground:      var(--color-t1);
+  --color-popover:              var(--color-surf);
+  --color-popover-foreground:   var(--color-t1);
+  --color-primary:              var(--color-acc);
+  --color-primary-foreground:   var(--color-bg);
+  --color-secondary:            var(--color-surf-2);
+  --color-secondary-foreground: var(--color-t1);
+  --color-muted:                var(--color-surf-2);
+  --color-muted-foreground:     var(--color-t2);
+  --color-accent:               var(--color-acc);
+  --color-accent-foreground:    var(--color-bg);
+  --color-destructive:          var(--color-red);
+  --color-destructive-foreground: var(--color-t1);
+  --color-border:               var(--color-bdr);
+  --color-input:                var(--color-surf);
+  --color-ring:                 var(--color-acc);
+
+  /* Surface aliases */
+  --color-surface:              var(--color-surf);
+  --color-surface-2:            var(--color-surf-2);
+
+  /* Accent shades */
+  --color-accent-dk:            var(--color-acc-dk);
+  --color-accent-bg:            var(--color-acc-bg);
+
+  /* Destructive shades */
+  --color-error:                var(--color-red);
+  --color-error-bg:             var(--color-red-bg);
+
+  /* Border subtle */
+  --color-border-subtle:        var(--color-bdr-s);
+
+  /* Typography */
+  --color-t1:                   var(--color-t1);
+  --color-t2:                   var(--color-t2);
+  --color-t3:                   var(--color-t3);
+
+  /* Tab colors */
+  --color-tab-off:              var(--color-tab-off);
+  --color-tab-on:               var(--color-tab-on);
+
+  /* Fonts (point Tailwind's `font-sans` to v3 body font) */
+  --font-sans:                  var(--font-body);
+  --font-display:               var(--font-display);
+
+  /* Border radius (shadcn uses --radius) */
+  --radius:                     0.75rem;
+}
+
+/* ─── shadcn radius tokens ────────────────────────────────────────────────── */
+:root {
+  --radius: 0.75rem;
+}
+
 /* ─── Global keyframe animations ─────────────────────────────────────────── */
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -9,5 +80,21 @@
   100% { opacity: 1; }
 }
 
-/* ─── Hide scrollbar (utility) ───────────────────────────────────────────── */
+@keyframes authOrbFloat {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%       { transform: translateY(-18px) scale(1.03); }
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+/* ─── Hide scrollbar utility ─────────────────────────────────────────────── */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

@@ -97,9 +97,9 @@ export interface Tab {
 
 export const TABS: Tab[] = [
   { id: 'discover', label: 'Discover', path: '/discover' },
-  { id: 'news', label: 'News', path: '/news' },
+  { id: 'news',     label: 'News',     path: '/news' },
   { id: 'schedule', label: 'Schedule', path: '/schedule' },
-  { id: 'circles', label: 'My Circles', path: '/circles' },
+  { id: 'circles',  label: 'Circles',  path: '/circles' },
 ];
 
 export type SportType = keyof typeof SPORTS;

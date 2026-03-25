@@ -66,7 +66,7 @@ export function useConversations(): UseConversationsReturn {
         return;
       }
 
-      const convIds = myRows.map((r) => r.conversation_id);
+      const convIds = myRows.map((r: any) => r.conversation_id);
 
       // 2. Get all participants for those conversations (+ their profiles)
       const { data: allParticipants, error: partErr } = await supabase
@@ -79,49 +79,56 @@ export function useConversations(): UseConversationsReturn {
 
       if (partErr) throw partErr;
 
-      // 3 & 4. For each conversation: fetch last message + unread count in parallel
-      const enriched = await Promise.all(
-        myRows.map(async (myRow) => {
+      // 3. Batch-fetch recent messages for all conversations in ONE query
+      //    (replaces N individual "last message" queries)
+      //    Limit: 50 messages per conversation is more than enough for last-message
+      //    display and unread counting — avoids downloading thousands of rows.
+      const { data: allMessages } = await supabase
+        .from('messages')
+        .select('id, conversation_id, sender_id, content, encrypted_content, expires_at, created_at')
+        .in('conversation_id', convIds)
+        .order('created_at', { ascending: false })
+        .limit(convIds.length * 50);
+
+      // Build last-message map: first occurrence per conversation_id = most recent
+      const lastMessageMap = new Map<string, Message>();
+      for (const msg of (allMessages ?? [])) {
+        if (!lastMessageMap.has(msg.conversation_id)) {
+          lastMessageMap.set(msg.conversation_id, msg as Message);
+        }
+      }
+
+      // 4. Compute unread counts in JS from the same batch
+      //    (replaces N individual count queries)
+      const lastReadByConv = new Map<string, string | null>(
+        myRows.map((r: any) => [r.conversation_id as string, r.last_read_at as string | null])
+      );
+      const unreadCountMap = new Map<string, number>();
+      for (const msg of (allMessages ?? [])) {
+        if (msg.sender_id === user.id) continue; // own messages don't count
+        const lastRead = lastReadByConv.get(msg.conversation_id) ?? null;
+        if (!lastRead || msg.created_at > lastRead) {
+          unreadCountMap.set(
+            msg.conversation_id,
+            (unreadCountMap.get(msg.conversation_id) ?? 0) + 1
+          );
+        }
+      }
+
+      const enriched = myRows.map((myRow: any) => {
           const convId = myRow.conversation_id;
           const conv = (myRow as any).conversations as ConversationItem['conversation'];
 
-          // Last message
-          const { data: lastMsgs } = await supabase
-            .from('messages')
-            .select('id, conversation_id, sender_id, content, encrypted_content, expires_at, created_at')
-            .eq('conversation_id', convId)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          const lastMessage: Message | null = lastMsgs?.[0] ?? null;
-
-          // Unread count
-          let unreadCount = 0;
-          if (myRow.last_read_at) {
-            const { count } = await supabase
-              .from('messages')
-              .select('id', { count: 'exact', head: true })
-              .eq('conversation_id', convId)
-              .gt('created_at', myRow.last_read_at)
-              .neq('sender_id', user.id);
-            unreadCount = count ?? 0;
-          } else {
-            // Never read — count everything not sent by self
-            const { count } = await supabase
-              .from('messages')
-              .select('id', { count: 'exact', head: true })
-              .eq('conversation_id', convId)
-              .neq('sender_id', user.id);
-            unreadCount = count ?? 0;
-          }
+          const lastMessage: Message | null = lastMessageMap.get(convId) ?? null;
+          const unreadCount = unreadCountMap.get(convId) ?? 0;
 
           // Build participant list for this conversation
           const convParticipants = (allParticipants ?? []).filter(
-            (p) => p.conversation_id === convId
+            (p: any) => p.conversation_id === convId
           );
           const others: ParticipantWithProfile[] = convParticipants
-            .filter((p) => p.user_id !== user.id)
-            .map((p) => ({
+            .filter((p: any) => p.user_id !== user.id)
+            .map((p: any) => ({
               participant: {
                 id: p.id,
                 conversation_id: p.conversation_id,
@@ -144,7 +151,7 @@ export function useConversations(): UseConversationsReturn {
             ? (firstOther?.avatar_url ?? null)
             : (conv.avatar_url ?? null);
           const isOnline = isDirect ? isOnlineNow(firstOther?.last_seen ?? null) : false;
-          const lastActivity = lastMessage?.created_at ?? conv.updated_at;
+          const lastActivity = (lastMessage as any)?.created_at ?? conv.updated_at;
 
           const item: ConversationItem = {
             conversation: conv,
@@ -166,8 +173,7 @@ export function useConversations(): UseConversationsReturn {
             lastActivity,
           };
           return item;
-        })
-      );
+        });
 
       // Sort by most recent activity
       enriched.sort(
@@ -190,7 +196,7 @@ export function useConversations(): UseConversationsReturn {
       activeConvIdRef.current = conversationId;
       const now = new Date().toISOString();
 
-      await supabase
+      await (supabase as any)
         .from('conversation_participants')
         .update({ last_read_at: now })
         .eq('conversation_id', conversationId)

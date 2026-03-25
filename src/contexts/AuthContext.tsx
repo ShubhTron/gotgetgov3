@@ -8,11 +8,16 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   loading: boolean;
+  isGuest: boolean;
+  guestSwipeCount: number;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  enterGuestMode: () => void;
+  exitGuestMode: () => void;
+  incrementGuestSwipeCount: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,18 +27,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState<boolean>(() =>
+    localStorage.getItem('gg-guest') === 'true'
+  );
+  const [guestSwipeCount, setGuestSwipeCount] = useState(0);
 
   useEffect(() => {
+    // Track whether we've already bootstrapped to avoid firing twice:
+    // getSession() fires first, then onAuthStateChange('INITIAL_SESSION') also fires.
+    // We only need to fetch the profile and update last_seen ONCE on startup.
+    let bootstrapped = false;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      bootstrapped = true;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // After confirming session — update last_seen
+        // Update last_seen once on startup
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from('profiles') as any)
           .update({ last_seen: new Date().toISOString() })
           .eq('id', session.user.id)
-          .then(() => {}); // fire-and-forget
+          .then(() => {});
         fetchProfile(session.user.id);
       } else {
         setLoading(false);
@@ -43,15 +58,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Skip INITIAL_SESSION if getSession() already bootstrapped — prevents
+      // a duplicate profile fetch + last_seen UPDATE on every page load.
+      if (_event === 'INITIAL_SESSION' && bootstrapped) return;
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // After confirming session — update last_seen
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase.from('profiles') as any)
-          .update({ last_seen: new Date().toISOString() })
-          .eq('id', session.user.id)
-          .then(() => {}); // fire-and-forget
+        // Only update last_seen on an actual new sign-in (not token refresh)
+        if (_event === 'SIGNED_IN') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase.from('profiles') as any)
+            .update({ last_seen: new Date().toISOString() })
+            .eq('id', session.user.id)
+            .then(() => {});
+        }
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
@@ -80,30 +101,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
+      options: { data: { full_name: fullName } },
     });
+    if (!error) exitGuestMode();
     return { error: error as Error | null };
   }
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) exitGuestMode();
     return { error: error as Error | null };
   }
 
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
+    if (!error) exitGuestMode();
     return { error: error as Error | null };
   }
 
@@ -129,16 +144,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   }
 
+  function enterGuestMode() {
+    localStorage.setItem('gg-guest', 'true');
+    setIsGuest(true);
+  }
+
+  function exitGuestMode() {
+    localStorage.removeItem('gg-guest');
+    setIsGuest(false);
+    setGuestSwipeCount(0);
+  }
+
+  function incrementGuestSwipeCount() {
+    setGuestSwipeCount((prev) => prev + 1);
+  }
+
   const value = {
     user,
     profile,
     session,
     loading,
+    isGuest,
+    guestSwipeCount,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     updateProfile,
+    enterGuestMode,
+    exitGuestMode,
+    incrementGuestSwipeCount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

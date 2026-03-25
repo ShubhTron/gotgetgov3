@@ -38,85 +38,64 @@ export function CirclesListView({ conversations, loading, error, onOpenChat }: C
         background: 'var(--color-bg)',
       }}
     >
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 16px 8px',
-          flexShrink: 0,
-        }}
-      >
-        {/* User avatar */}
-        <Avatar
-          name={profile?.full_name ?? 'Me'}
-          imageUrl={profile?.avatar_url ?? undefined}
-          size="sm"
-        />
-
-        {/* Title */}
-        <h1
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 'var(--text-lg)',
-            fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'],
-            color: 'var(--color-t1)',
-            margin: 0,
-            letterSpacing: '-0.01em',
-          }}
-        >
-          Circles
-        </h1>
-
-        {/* Compose icon */}
-        <button
-          aria-label="New message"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 'var(--radius-full)',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--color-acc)',
-          }}
-        >
-          <IconPencil size={20} />
-        </button>
-      </div>
-
-      {/* ── Search bar ──────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
+      {/* ── Search bar & New Chat ──────────────────────────────────────── */}
+      <div style={{ padding: '16px 16px 12px', flexShrink: 0 }}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            background: 'var(--color-surf-2)',
-            borderRadius: 'var(--radius-full)',
-            padding: '10px 14px',
+            gap: 12,
           }}
         >
-          <IconSearch size={15} style={{ color: 'var(--color-t3)', flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder="Search interactions"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+          {/* Search bar */}
+          <div
             style={{
               flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'var(--color-surf-2)',
+              borderRadius: 'var(--radius-full)',
+              padding: '10px 14px',
+            }}
+          >
+            <IconSearch size={15} style={{ color: 'var(--color-t3)', flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder="Search interactions"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                flex: 1,
+                background: 'none',
+                border: 'none',
+                outline: 'none',
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-t1)',
+              }}
+            />
+          </div>
+
+          {/* New Chat button */}
+          <button
+            aria-label="New message"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 'var(--radius-full)',
               background: 'none',
               border: 'none',
-              outline: 'none',
-              fontFamily: 'var(--font-body)',
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-t1)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-acc)',
+              flexShrink: 0,
             }}
-          />
+          >
+            <IconPencil size={20} />
+          </button>
         </div>
       </div>
 

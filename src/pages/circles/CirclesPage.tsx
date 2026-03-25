@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CirclesListView } from './CirclesListView';
 import { ChatDetailView } from './ChatDetailView';
@@ -50,6 +51,7 @@ export function CirclesPage() {
   const [screen, setScreen] = useState<CirclesScreen>({ view: 'list' });
   // Single hook instance — one WebSocket subscription shared by both views
   const { conversations, loading, error, markAsRead } = useConversations();
+  const location = useLocation();
 
   const openChat = useCallback((item: ConversationItem) => {
     setScreen({ view: 'chat', item });
@@ -58,6 +60,17 @@ export function CirclesPage() {
   const goBack = useCallback(() => {
     setScreen({ view: 'list' });
   }, []);
+
+  // Auto-open a conversation when navigated from invite acceptance
+  useEffect(() => {
+    const targetId = (location.state as { openConversationId?: string } | null)?.openConversationId;
+    if (!targetId || loading || screen.view === 'chat') return;
+    const item = conversations.find(c => c.conversation.id === targetId);
+    if (item) {
+      openChat(item);
+      window.history.replaceState({}, '', '/circles');
+    }
+  }, [conversations, loading, location.state]);
 
   return (
     <div

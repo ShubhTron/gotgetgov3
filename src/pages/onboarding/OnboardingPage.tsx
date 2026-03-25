@@ -1,0 +1,1853 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check, AlertCircle, ChevronDown, ArrowLeft } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/ImageUpload';
+import { TimeRangePicker, type TimeRange } from '@/components/ui/TimeRangePicker';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { SPORTS, type SportType } from '@/types';
+import { type ClubRole } from '@/types/database';
+
+type Step =
+  | 'roles'
+  | 'profile'
+  | 'location_club'
+  | 'coach_sports'
+  | 'coach_specialties'
+  | 'coach_lessons'
+  | 'sports'
+  | 'skill'
+  | 'availability'
+  | 'bio';
+
+export function buildSteps(roles: ClubRole[]): Step[] {
+  const steps: Step[] = ['roles', 'profile', 'location_club'];
+  if (roles.includes('coach')) {
+    steps.push('coach_sports', 'coach_specialties', 'coach_lessons');
+  }
+  if (roles.includes('player')) {
+    steps.push('sports');
+  }
+  if (roles.includes('player')) {
+    steps.push('skill');
+  }
+  steps.push('availability', 'bio');
+  return steps;
+}
+
+const STEP_TITLES: Record<Step, string> = {
+  roles: 'How will you use the app?',
+  profile: 'Set up your profile',
+  location_club: 'Find your club',
+  coach_sports: 'What sports do you coach?',
+  coach_specialties: 'What are your specialties?',
+  coach_lessons: 'Your lesson packages',
+  sports: 'What sports do you play?',
+  skill: "What's your skill level?",
+  availability: 'When can you play?',
+  bio: 'Tell us about yourself',
+};
+
+const STEP_DESCRIPTIONS: Record<Step, string> = {
+  roles: 'Select all the roles that apply to you.',
+  profile: 'This is how other players will see you.',
+  location_club: 'Find and join your home club.',
+  coach_sports: 'Select the sports you coach or teach.',
+  coach_specialties: 'Choose your coaching specialties for each sport.',
+  coach_lessons: 'Set up your lesson packages and pricing.',
+  sports: "Select all the sports you're interested in.",
+  skill: 'This helps us match you with similar players.',
+  availability: "Tap days you're typically available.",
+  bio: 'A brief bio helps other players get to know you.',
+};
+
+function getSportsStepTitle(roles: ClubRole[]): string {
+  const isPlayer = roles.includes('player');
+  const isCoach = roles.includes('coach');
+  if (isPlayer && isCoach) return 'What sports do you play or coach?';
+  if (isCoach) return 'What sports do you coach?';
+  return 'What sports do you play?';
+}
+
+function getSportsStepDesc(roles: ClubRole[]): string {
+  const isPlayer = roles.includes('player');
+  const isCoach = roles.includes('coach');
+  if (isPlayer && isCoach) return "Select all the sports you're interested in playing or coaching.";
+  if (isCoach) return "Select all the sports you coach or teach.";
+  return "Select all the sports you're interested in.";
+}
+
+export function toggleRole(roles: ClubRole[], role: ClubRole): ClubRole[] {
+  const has = roles.includes(role);
+  if (has && roles.length === 1) return roles; // block removing last role
+  return has
+    ? roles.filter(r => r !== role)
+    : [...roles, role];
+}
+
+interface SelectedClub {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  membershipRole?: ClubRole;
+}
+
+const CLUB_SEARCH_RADIUS_M = 25000;
+
+const SPORT_IMAGES: Record<string, string> = {
+  platform_tennis: 'https://images.pexels.com/photos/5067821/pexels-photo-5067821.jpeg?auto=compress&cs=tinysrgb&w=400',
+  padel: 'https://images.pexels.com/photos/8224718/pexels-photo-8224718.jpeg?auto=compress&cs=tinysrgb&w=400',
+  tennis: 'https://images.pexels.com/photos/209977/pexels-photo-209977.jpeg?auto=compress&cs=tinysrgb&w=400',
+  squash: 'https://images.pexels.com/photos/7648097/pexels-photo-7648097.jpeg?auto=compress&cs=tinysrgb&w=400',
+  pickleball: 'https://images.pexels.com/photos/8224681/pexels-photo-8224681.jpeg?auto=compress&cs=tinysrgb&w=400',
+  badminton: 'https://images.pexels.com/photos/3660204/pexels-photo-3660204.jpeg?auto=compress&cs=tinysrgb&w=400',
+  golf: 'https://images.pexels.com/photos/1325681/pexels-photo-1325681.jpeg?auto=compress&cs=tinysrgb&w=400',
+  table_tennis: 'https://images.pexels.com/photos/976873/pexels-photo-976873.jpeg?auto=compress&cs=tinysrgb&w=400',
+  racquetball: 'https://images.pexels.com/photos/7648298/pexels-photo-7648298.jpeg?auto=compress&cs=tinysrgb&w=400',
+  'racquetball/squash_57': '/squash57-137.jpg',
+  beach_tennis: 'https://images.pexels.com/photos/1263426/pexels-photo-1263426.jpeg?auto=compress&cs=tinysrgb&w=400',
+  real_tennis: 'https://images.pexels.com/photos/5741289/pexels-photo-5741289.jpeg?auto=compress&cs=tinysrgb&w=400',
+};
+
+export const COACH_SPECIALTIES: Partial<Record<SportType, string[]>> = {
+  tennis:          ['Serve technique', 'Footwork', 'Match strategy', 'Doubles tactics', 'Mental game'],
+  padel:           ['Wall play', 'Bandeja', 'Víbora', 'Positioning', 'Smash'],
+  platform_tennis: ['Screening', 'Wire play', 'Overhead', 'Doubles strategy', 'Lob defense'],
+  pickleball:      ['Dinking', 'Third shot drop', 'Stacking', 'Kitchen play', 'Erne'],
+  squash:          ['Ghosting', 'Drop shot', 'Boast', 'Court movement', 'Serve variation'],
+  badminton:       ['Smash', 'Net play', 'Footwork', 'Doubles rotation', 'Clear'],
+  golf:            ['Driving', 'Short game', 'Putting', 'Course management', 'Bunker play'],
+  table_tennis:    ['Topspin', 'Backhand loop', 'Serve & receive', 'Footwork', 'Blocking'],
+  beach_tennis:    ['Overhead', 'Lob', 'Positioning', 'Serve', 'Volley'],
+  real_tennis:     ['Chase play', 'Hazard side', 'Service', 'Grille', 'Dedans'],
+  racquetball_squash57: ['Power serve', 'Kill shot', 'Ceiling ball', 'Pinch shot', 'Z-ball'],
+};
+
+interface AvailabilityEntry {
+  day: number;
+  ranges: TimeRange[];
+}
+
+interface LessonPackage {
+  id: string;           // client-side uuid for list key
+  name: string;
+  durationMinutes: number;
+  price: number | null;
+  currency: string;
+  isPackage: boolean;
+  packageCount: number | null;
+}
+
+const DEFAULT_LESSONS: LessonPackage[] = [
+  { id: crypto.randomUUID(), name: 'Private (60 min)', durationMinutes: 60, price: null, currency: 'USD', isPackage: false, packageCount: null },
+  { id: crypto.randomUUID(), name: 'Group (90 min)',   durationMinutes: 90, price: null, currency: 'USD', isPackage: false, packageCount: null },
+];
+
+interface OnboardingData {
+  locationCity: string;
+  locationLat: number | null;
+  locationLng: number | null;
+  locationDetected: boolean;
+  selectedSports: SportType[];
+  sportLevels: Record<SportType, number>;
+  showRatings: Record<SportType, boolean>;
+  externalRatings: Record<SportType, string>;
+  fullName: string;
+  avatarUrl: string;
+  avatarFile?: File;
+  selectedClubs: SelectedClub[];
+  availability: AvailabilityEntry[];
+  bio: string;
+
+  // --- new fields ---
+  selectedRoles: ClubRole[];
+  coachSports: SportType[];
+  coachClubs: SelectedClub[];
+  coachSpecialties: Record<SportType, string[]>;
+  coachLessons: LessonPackage[];
+  coachProfileId: string | null;
+}
+
+const skillValueToString = (value: number): string => {
+  const levels = ['beginner', 'intermediate', 'advanced', 'expert'];
+  return levels[Math.min(value, levels.length - 1)] || 'beginner';
+};
+
+const S = `
+  :root{--text-muted:var(--color-t2);--text-dim:var(--color-t3)}
+  .ob-root{background:var(--color-bg);font-family:var(--font-body);min-height:100vh;min-height:100dvh;position:relative;overflow:hidden}
+  .ob-court-bg{position:fixed;inset:0;background-image:url(/pickleball-paddle-court.webp);background-size:cover;background-position:center;filter:blur(8px) saturate(0.3) brightness(0.2);transform:scale(1.08);z-index:0}
+  .ob-hero-gradient{position:fixed;inset:0;z-index:1;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(22,212,106,0.12) 0%,transparent 65%),linear-gradient(180deg,rgba(6,12,26,0.1) 0%,rgba(6,12,26,0.45) 40%,rgba(6,12,26,0.82) 70%,var(--color-bg) 100%)}
+  .ob-grain{position:fixed;inset:0;pointer-events:none;z-index:2;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E")}
+  .ob-court-lines{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;height:52%;z-index:1;pointer-events:none}
+  .ob-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:1;background:radial-gradient(circle,rgba(22,212,106,0.15) 0%,transparent 70%);filter:blur(48px)}
+  .ob-content{position:relative;z-index:10;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;max-width:480px;margin:0 auto;padding:0 20px}
+  .ob-header{display:flex;align-items:center;justify-content:space-between;padding:16px 0 10px;gap:12px}
+  .ob-back-btn{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--color-surf);border:1px solid var(--color-bdr);color:var(--color-t1);cursor:pointer;transition:background 0.2s,transform 0.15s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .ob-back-btn:hover{background:var(--color-surf-2)}.ob-back-btn:active{transform:scale(0.94)}.ob-back-btn:disabled{opacity:0.25;cursor:not-allowed}
+  .ob-skip-btn{font-family:var(--font-body);font-weight:500;font-size:0.9rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-t2);background:none;border:none;cursor:pointer;padding:8px 4px;transition:color 0.2s}
+  .ob-skip-btn:hover{color:var(--color-t1)}
+  /* ── Progress — dots + step label ── */
+  .ob-progress-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .ob-dots{display:flex;align-items:center;justify-content:center;gap:7px}
+  .ob-dot{
+    border-radius:50%;
+    transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    flex-shrink:0;
+  }
+  .ob-dot.active{
+    width:24px;height:10px;
+    border-radius:5px;
+    background:var(--color-acc);
+    box-shadow:0 0 12px rgba(22,212,106,0.8);
+  }
+  .ob-dot.done{width:7px;height:7px;background:var(--color-acc-bg)}
+  .ob-dot.future{width:7px;height:7px;background:rgba(255,255,255,0.18)}
+  .ob-step-counter{
+    font-family:var(--font-body);font-size:0.68rem;font-weight:500;
+    letter-spacing:0.1em;color:var(--color-t3);text-transform:uppercase;
+  }
+  /* hide old bar */
+  .ob-progress-bar-track{display:none}
+  .ob-divider{height:1px;background:linear-gradient(90deg,transparent,var(--color-acc),transparent);opacity:0.35;margin:4px 0 20px}
+  .ob-step-title{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:clamp(2rem,9vw,2.8rem);color:var(--color-t1);line-height:1.1;letter-spacing:-0.5px;margin-bottom:8px}
+  .ob-step-title span{color:var(--color-acc)}
+  .ob-step-desc{font-family:var(--font-body);font-weight:500;font-size:0.95rem;color:var(--color-t2);margin-bottom:24px}
+  .ob-card{background:transparent;border:none;border-radius:0;padding:0}
+  .ob-input{width:100%;padding:14px 16px;background:var(--color-surf);border:1px solid var(--color-bdr);border-radius:12px;color:var(--color-t1);font-family:var(--font-body);font-size:0.95rem;font-weight:500;outline:none;transition:border-color 0.2s,background 0.2s;box-sizing:border-box;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .ob-input::placeholder{color:var(--color-t3)}.ob-input:focus{border-color:var(--color-acc);background:var(--color-acc-bg)}
+  .ob-textarea{width:100%;padding:14px 16px;background:var(--color-surf);border:1px solid var(--color-bdr);border-radius:12px;color:var(--color-t1);font-family:var(--font-body);font-size:0.95rem;font-weight:500;outline:none;resize:none;transition:border-color 0.2s,background 0.2s;box-sizing:border-box;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .ob-textarea::placeholder{color:var(--color-t3)}.ob-textarea:focus{border-color:var(--color-acc);background:var(--color-acc-bg)}
+  .ob-label{font-family:var(--font-body);font-size:0.7rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-t3);margin-bottom:8px;display:block}
+  .ob-sport-card{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:1/1;cursor:pointer;border:2px solid rgba(255,255,255,0.08);transition:border-color 0.2s,transform 0.15s}
+  .ob-sport-card.selected{border-color:var(--color-acc)}.ob-sport-card:hover{transform:scale(1.02)}.ob-sport-card:active{transform:scale(0.97)}
+  .ob-skill-btn{padding:10px 8px;border-radius:10px;font-family:var(--font-display);font-weight:700;font-size:0.9rem;text-transform:uppercase;letter-spacing:0.04em;border:1px solid var(--color-bdr);background:var(--color-surf);color:var(--color-t2);cursor:pointer;transition:all 0.15s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .ob-skill-btn.active{background:var(--color-acc);border-color:var(--color-acc);color:var(--color-bg);box-shadow:0 2px 12px rgba(22,212,106,0.4)}
+  .ob-skill-btn:hover:not(.active){background:var(--color-surf-2);color:var(--color-t1)}
+
+  /* ── Skill slider — comprehensive fix ── */
+  .ob-skill-slider-wrap{padding:0 0 8px}
+  .ob-skill-display{display:none}
+  .ob-skill-level-name{display:none}
+  .ob-skill-level-desc{display:none}
+
+  /* sport section card */
+  .ob-sport-section{
+    margin-bottom:20px;
+    position:relative;
+    background:var(--color-surf);
+    border:1px solid var(--color-bdr);
+    border-radius:16px;
+    padding:18px 18px 20px;
+    overflow:hidden;
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    box-shadow:0 4px 24px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .ob-sport-section-bg{
+    display:none;
+  }
+  .ob-sport-section-content{position:relative;z-index:1}
+  .ob-sport-section-name{
+    font-family:var(--font-body);font-weight:600;
+    font-size:1.15rem;text-transform:uppercase;letter-spacing:0.12em;
+    color:var(--color-t1);margin-bottom:12px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+
+  /* inline level + desc row */
+  .ob-skill-inline{
+    display:flex;flex-direction:column;gap:3px;
+    margin-bottom:20px;
+  }
+  .ob-skill-inline-name{
+    font-family:var(--font-body);font-weight:700;
+    font-size:0.95rem;text-transform:uppercase;letter-spacing:0.12em;
+    color:var(--color-t1);
+    transition:font-weight 0.2s,color 0.2s;
+  }
+  .ob-skill-inline-desc{
+    font-family:var(--font-body);font-size:0.78rem;font-weight:400;
+    color:var(--color-t2);
+    transition:color 0.2s;
+  }
+
+  /* track */
+  .ob-slider-track-wrap{position:relative;padding:0 2px}
+  .ob-slider-track{
+    position:relative;height:4px;border-radius:4px;
+    background:rgba(255,255,255,0.15);
+  }
+  .ob-slider-fill{
+    position:absolute;left:0;top:0;height:100%;border-radius:4px;
+    background:linear-gradient(90deg,var(--color-acc),var(--color-acc));
+    transition:width 0.28s cubic-bezier(0.22,1,0.36,1);
+    box-shadow:0 0 8px rgba(22,212,106,0.5);
+  }
+
+  /* ticks */
+  .ob-slider-ticks{
+    position:absolute;top:50%;transform:translateY(-50%);
+    left:0;right:0;display:flex;justify-content:space-between;
+    pointer-events:none;
+  }
+  .ob-slider-tick{
+    width:4px;height:4px;border-radius:50%;
+    background:rgba(255,255,255,0.2);
+    transition:background 0.25s,transform 0.25s;
+  }
+  .ob-slider-tick.passed{background:var(--color-acc-bg)}
+  .ob-slider-tick.current{background:#fff;transform:scale(1.6);box-shadow:0 0 6px rgba(255,255,255,0.5)}
+
+  /* thumb */
+  .ob-slider-thumb{
+    position:absolute;top:50%;
+    width:20px;height:20px;border-radius:50%;
+    background:#fff;
+    border:2.5px solid var(--color-acc);
+    box-shadow:0 0 0 4px rgba(22,212,106,0.18),0 2px 10px rgba(0,0,0,0.4);
+    transform:translate(-50%,-50%);
+    transition:left 0.28s cubic-bezier(0.22,1,0.36,1),box-shadow 0.2s;
+    pointer-events:none;z-index:2;
+  }
+
+  /* native range overlay */
+  .ob-slider-input{
+    position:absolute;inset:-14px 0;width:100%;height:calc(100% + 28px);
+    opacity:0;cursor:pointer;z-index:3;margin:0;-webkit-appearance:none;
+  }
+  .ob-slider-input:active ~ .ob-slider-thumb{
+    box-shadow:0 0 0 8px rgba(22,212,106,0.2),0 2px 10px rgba(0,0,0,0.4);
+  }
+
+  /* labels — equal grid so ticks align perfectly */
+  .ob-slider-labels{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    margin-top:10px;
+  }
+  .ob-slider-label{
+    font-family:var(--font-body);font-weight:400;
+    font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;
+    color:var(--color-t3);
+    transition:color 0.2s,font-weight 0.2s;cursor:pointer;
+    padding:4px 0;user-select:none;
+    text-align:center;
+  }
+  .ob-slider-label:first-child{text-align:left}
+  .ob-slider-label:last-child{text-align:right}
+  .ob-slider-label.active{color:var(--color-t1);font-weight:700}
+
+  /* PTI rating toggle — secondary button style */
+  .ob-rating-toggle{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-top:16px;padding:9px 16px;
+    background:var(--color-acc-bg);
+    border:1px solid var(--color-bdr);
+    border-radius:10px;
+    font-family:var(--font-body);font-size:0.78rem;font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;
+    color:var(--color-acc);
+    cursor:pointer;transition:background 0.2s,border-color 0.2s;
+    width:100%;justify-content:center;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  }
+  .ob-rating-toggle:hover{background:var(--color-surf-2);border-color:var(--color-acc)}
+
+  /* legacy hidden */
+  .ob-skill-card,.ob-skill-card-num,.ob-skill-card-check,
+  .ob-skill-card-strip,.ob-skill-card-icon,.ob-skill-card-body,
+  .ob-skill-card-rank{display:none}
+  .ob-day-btn{aspect-ratio:1/1;border-radius:10px;font-family:var(--font-display);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;border:1px solid var(--color-bdr);background:var(--color-surf);color:var(--color-t2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .ob-day-btn.active{background:var(--color-acc);border-color:var(--color-acc);color:var(--color-bg);box-shadow:0 2px 10px rgba(22,212,106,0.35);backdrop-filter:none}
+  .ob-cta{width:100%;height:60px;border-radius:16px;cursor:pointer;background:var(--color-acc);color:var(--color-bg);font-family:var(--font-display);font-weight:800;font-size:1.15rem;letter-spacing:0.12em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;border:none;transition:box-shadow 0.3s,transform 0.15s;box-shadow:0 4px 28px rgba(22,212,106,0.45),0 1px 0 rgba(255,255,255,0.1) inset;position:relative;overflow:hidden}
+  .ob-cta::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.14) 0%,transparent 50%);pointer-events:none}
+  .ob-cta:hover{box-shadow:0 8px 36px rgba(22,212,106,0.6),0 1px 0 rgba(255,255,255,0.1) inset;transform:translateY(-1px)}
+  .ob-cta:active{transform:scale(0.98)}
+  .ob-cta.pressed{background:transparent;border:2px solid var(--color-acc);color:var(--color-acc);box-shadow:none;animation:ob-pulse 0.5s ease forwards}
+  .ob-cta:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+  @keyframes ob-pulse{0%{box-shadow:0 0 0 0 rgba(22,212,106,0.6)}60%{box-shadow:0 0 0 10px rgba(22,212,106,0)}100%{box-shadow:0 0 0 0 rgba(22,212,106,0)}}
+  .ob-cta-sticky{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;align-items:flex-end;z-index:20;pointer-events:none;padding:40px 20px 48px;background:linear-gradient(0deg,var(--color-bg) 55%,rgba(6,12,26,0.85) 75%,transparent 100%)}
+  .ob-cta-sticky .ob-cta{pointer-events:auto;width:100%;max-width:440px}
+  .ob-sport-section{margin-bottom:28px}
+  .ob-modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(4,10,28,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px}
+  .ob-modal{background:linear-gradient(160deg,rgba(8,18,48,0.88) 0%,rgba(5,12,35,0.92) 100%);border:1px solid var(--color-bdr);border-top:1px solid var(--color-acc);border-radius:20px;padding:28px 24px 24px;max-width:340px;width:100%;box-shadow:0 0 0 1px rgba(22,212,106,0.15),0 20px 60px rgba(0,30,20,0.5),0 0 80px rgba(22,212,106,0.08);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .ob-modal-icon-wrap{width:52px;height:52px;border-radius:14px;background:var(--color-acc-bg);border:1px solid var(--color-bdr);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 0 28px rgba(22,212,106,0.2),inset 0 1px 0 rgba(22,212,106,0.2)}
+  .ob-modal-title{font-family:var(--font-display);font-weight:900;font-size:clamp(1.6rem,7vw,2rem);text-transform:uppercase;color:var(--color-t1);margin-bottom:8px;text-align:center;letter-spacing:-0.5px;line-height:1.1}
+  .ob-modal-desc{font-family:var(--font-body);font-size:0.875rem;font-weight:400;color:var(--color-t2);margin-bottom:24px;line-height:1.6;text-align:center}
+  .ob-modal-btns{display:flex;gap:8px}
+  .ob-modal-btn-secondary{flex:1;height:50px;border-radius:12px;background:var(--color-acc);border:none;color:var(--color-bg);font-family:var(--font-display);font-weight:800;font-size:1rem;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:background 0.18s;box-shadow:0 4px 16px rgba(22,212,106,0.4)}
+  .ob-modal-btn-secondary:hover{opacity:0.9}
+  .ob-modal-btn-primary{flex:1;height:50px;border-radius:12px;background:var(--color-surf);border:1px solid var(--color-bdr);color:var(--color-t2);font-family:var(--font-display);font-weight:700;font-size:1rem;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:background 0.18s,color 0.18s}
+  .ob-modal-btn-primary:hover{background:var(--color-surf-2);color:var(--color-t1)}
+  .ob-success-check{width:72px;height:72px;border-radius:50%;background:var(--color-acc-bg);border:2px solid var(--color-acc);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 0 32px rgba(22,212,106,0.3)}
+  .ob-spinner{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;animation:ob-spin 0.7s linear infinite}
+  @keyframes ob-spin{to{transform:rotate(360deg)}}
+  .ob-role-card{position:relative;border-radius:14px;padding:20px 16px;cursor:pointer;border:2px solid rgba(255,255,255,0.08);background:var(--color-surf);transition:border-color 0.2s,background 0.2s,transform 0.15s;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;gap:8px;min-height:110px}
+  .ob-role-card.selected{border-color:var(--color-acc);background:var(--color-acc-bg)}
+  .ob-role-card.disabled{opacity:0.38;cursor:not-allowed}
+  .ob-role-card:hover:not(.disabled):not(.selected){background:var(--color-surf-2);transform:scale(1.02)}
+  .ob-role-card:active:not(.disabled){transform:scale(0.97)}
+  .ob-role-card-icon{font-size:1.6rem;line-height:1}
+  .ob-role-card-title{font-family:var(--font-display);font-weight:700;font-size:1rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-t1)}
+  .ob-role-card-desc{font-family:var(--font-body);font-size:0.75rem;color:var(--color-t2)}
+  .ob-role-card-check{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;background:var(--color-acc);display:flex;align-items:center;justify-content:center}
+  .ob-coming-soon-badge{position:absolute;top:8px;right:8px;font-family:var(--font-body);font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:2px 6px;color:var(--color-t1)}
+  .ob-club-result{padding:12px 14px;border-radius:10px;font-family:var(--font-body);font-size:0.9rem;font-weight:500;color:var(--color-t1);background:var(--color-surf);border:1px solid var(--color-bdr);cursor:pointer;transition:background 0.15s;text-align:left;width:100%}
+  .ob-club-result:hover{background:var(--color-surf-2)}
+  .ob-club-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:var(--color-acc-bg);border:1px solid var(--color-bdr);font-family:var(--font-body);font-size:0.82rem;font-weight:500;color:var(--color-t1)}
+  .ob-lesson-row{display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--color-surf);border:1px solid var(--color-bdr);border-radius:12px}
+  .ob-specialty-group{display:flex;flex-direction:column;gap:10px}
+  .ob-specialty-group-label{font-family:var(--font-display);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-t2);margin:0}
+`;
+
+interface StepProps {
+  data: OnboardingData;
+  setData: React.Dispatch<React.SetStateAction<OnboardingData>>;
+}
+
+function useGoogleMaps(): { ready: boolean } {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+    if (!key) return;
+
+    const src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+
+    // Avoid appending if script already exists
+    if (!document.querySelector(`script[src="${src}"]`)) {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+
+    // Poll until window.google?.maps is available
+    const interval = setInterval(() => {
+      if ((window as Window & typeof globalThis & { google?: { maps?: unknown } }).google?.maps) {
+        setReady(true);
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return { ready };
+}
+
+function useClubSearch(
+  query: string,
+  lat: number | null,
+  lng: number | null,
+  sports: SportType[]
+): { results: SelectedClub[]; loading: boolean } {
+  const [results, setResults] = useState<SelectedClub[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+
+    // Early-exit conditions
+    if (!trimmed || lat === null || lng === null) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    // Maps SDK not ready
+    const g = (window as Window & typeof globalThis & { google?: { maps?: { places?: unknown; LatLng?: unknown } } }).google;
+    if (!g?.maps) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    const timer = setTimeout(() => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapsApi = g.maps as any;
+        const service = new mapsApi.places.PlacesService(document.createElement('div'));
+        const keyword = sports.join(' ');
+
+        service.nearbySearch(
+          {
+            location: new mapsApi.LatLng(lat, lng),
+            radius: CLUB_SEARCH_RADIUS_M,
+            keyword,
+            type: 'establishment',
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (places: any[] | null, status: string) => {
+            if (status === mapsApi.places.PlacesServiceStatus.OK && places) {
+              setResults(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                places.map((place: any) => ({
+                  id: place.place_id ?? '',
+                  name: place.name ?? '',
+                  city: null,
+                  state: null,
+                  logo_url: null,
+                  cover_image_url: null,
+                  location_lat: place.geometry?.location?.lat() ?? null,
+                  location_lng: place.geometry?.location?.lng() ?? null,
+                }))
+              );
+            } else {
+              setResults([]);
+            }
+            setLoading(false);
+          }
+        );
+      } catch (err) {
+        console.error('Club search error:', err);
+        setResults([]);
+        setLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [query, lat, lng, sports]);
+
+  return { results, loading };
+}
+
+export function OnboardingPage() {
+  const navigate = useNavigate();
+  const { user, updateProfile } = useAuth();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [btnPressed, setBtnPressed] = useState(false);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [direction, setDirection] = useState(1);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const [data, setData] = useState<OnboardingData>({
+    locationCity: '',
+    locationLat: null,
+    locationLng: null,
+    locationDetected: false,
+    selectedSports: [],
+    sportLevels: {} as Record<SportType, number>,
+    showRatings: {} as Record<SportType, boolean>,
+    externalRatings: {} as Record<SportType, string>,
+    fullName: user?.user_metadata?.full_name || '',
+    avatarUrl: user?.user_metadata?.avatar_url || '',
+    selectedClubs: [],
+    availability: [
+      { day: 1, ranges: [{ start: '18:00', end: '21:00' }] },
+      { day: 2, ranges: [{ start: '18:00', end: '21:00' }] },
+      { day: 3, ranges: [{ start: '18:00', end: '21:00' }] },
+      { day: 4, ranges: [{ start: '18:00', end: '21:00' }] },
+      { day: 5, ranges: [{ start: '18:00', end: '21:00' }] },
+    ],
+    bio: '',
+    selectedRoles: ['player'],
+    coachSports: [],
+    coachClubs: [],
+    coachSpecialties: {} as Record<SportType, string[]>,
+    coachLessons: [],
+    coachProfileId: null,
+  });
+
+  const steps = useMemo(() => buildSteps(data.selectedRoles), [data.selectedRoles]);
+
+  const step = steps[currentStep];
+  const isFirstStep = currentStep === 0;
+  const isLastStep = currentStep === steps.length - 1;
+
+  useEffect(() => {
+    if (data.locationCity) return;
+    fetch('https://ipapi.co/json/')
+      .then(r => r.json())
+      .then(d => {
+        if (d.city) setData(prev => ({ ...prev, locationCity: `${d.city}${d.region ? ', ' + d.region : ''}`, locationLat: d.latitude ?? null, locationLng: d.longitude ?? null }));
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleNext = () => {
+    if (isLastStep) {
+      setBtnPressed(true);
+      setTimeout(() => { setBtnPressed(false); handleComplete(); }, 420);
+    } else {
+      setBtnPressed(true);
+      setTimeout(() => { setBtnPressed(false); setDirection(1); setCurrentStep(p => p + 1); }, 420);
+    }
+  };
+
+  const handleBack = () => {
+    if (!isFirstStep) { setDirection(-1); setCurrentStep(p => p - 1); }
+  };
+
+  const handleSkip = () => {
+    if (step === 'roles') {
+      setData(prev => ({ ...prev, selectedRoles: ['player'] }));
+      setDirection(1);
+      setCurrentStep(p => p + 1);
+    } else if (step === 'skill') {
+      setShowSkipConfirm(true);
+    } else if (isLastStep) {
+      handleComplete();
+    } else {
+      setDirection(1);
+      setCurrentStep(p => p + 1);
+    }
+  };
+
+  const confirmSkip = () => {
+    setShowSkipConfirm(false);
+    setDirection(1);
+    setCurrentStep(p => p + 1);
+  };
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      let avatarUrl = data.avatarUrl;
+      if (data.avatarFile) {
+        const fileExt = data.avatarFile.name.split('.').pop();
+        const fileName = `${user!.id}/avatar.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, data.avatarFile, { upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+          avatarUrl = urlData.publicUrl;
+        }
+      }
+      await updateProfile({ full_name: data.fullName, avatar_url: avatarUrl || null, location_city: data.locationCity || null, location_country: null, location_lat: data.locationLat, location_lng: data.locationLng, bio: data.bio, onboarding_completed: true });
+      for (const sport of data.selectedSports) {
+        await supabase.from('user_sport_profiles').upsert({ user_id: user!.id, sport, self_assessed_level: skillValueToString(data.sportLevels[sport] ?? 0) });
+      }
+      for (const entry of data.availability) {
+        for (const range of entry.ranges) {
+          await supabase.from('availability').insert({ user_id: user!.id, day_of_week: entry.day, start_time: range.start, end_time: range.end });
+        }
+      }
+      for (const club of data.selectedClubs) {
+        await supabase.from('user_clubs').upsert({
+          user_id: user!.id,
+          club_id: club.id,
+          is_home_club: data.selectedClubs.indexOf(club) === 0,
+          role: club.membershipRole ?? 'player',
+        });
+      }
+      const refUserId = localStorage.getItem('gotgetgo_ref');
+      if (refUserId && refUserId !== user!.id) {
+        await supabase.from('connections').upsert([{ user_id: user!.id, connected_user_id: refUserId, status: 'connected' }, { user_id: refUserId, connected_user_id: user!.id, status: 'connected' }]);
+        localStorage.removeItem('gotgetgo_ref');
+      }
+      // Persist user roles
+      try {
+        await (supabase as any).from('user_roles').upsert({ user_id: user!.id, role: 'player' });
+        for (const role of data.selectedRoles.filter(r => r !== 'player')) {
+          await (supabase as any).from('user_roles').upsert({ user_id: user!.id, role });
+        }
+      } catch (err) {
+        console.error('Role persistence error:', err);
+      }
+      // Persist coach data if coach role selected
+      if (data.selectedRoles.includes('coach') && data.coachProfileId) {
+        try {
+          await (supabase as any).from('coach_profiles').update({ is_active: true }).eq('id', data.coachProfileId);
+          for (const sport of data.coachSports) {
+            await (supabase as any).from('coach_sports').upsert({
+              coach_profile_id: data.coachProfileId,
+              sport,
+              specialties: data.coachSpecialties[sport] ?? [],
+            });
+          }
+          for (const lesson of data.coachLessons) {
+            await (supabase as any).from('coach_lessons').insert({
+              coach_profile_id: data.coachProfileId,
+              name: lesson.name,
+              duration_minutes: lesson.durationMinutes,
+              price: lesson.price,
+              currency: lesson.currency,
+              is_package: lesson.isPackage,
+              package_count: lesson.packageCount,
+            });
+          }
+          for (const club of data.coachClubs) {
+            await (supabase as any).from('user_clubs').upsert({ user_id: user!.id, club_id: club.id, role: 'coach' });
+          }
+        } catch (err) {
+          console.error('Coach data persistence error:', err);
+        }
+      }
+      // Create broadcast channels for club admin
+      if (data.selectedRoles.includes('club_admin')) {
+        for (const club of data.selectedClubs) {
+          try {
+            const { data: existing } = await (supabase as any)
+              .from('broadcast_channels')
+              .select('id')
+              .eq('club_id', club.id)
+              .maybeSingle();
+            if (!existing) {
+              await (supabase as any).from('broadcast_channels').insert({
+                club_id: club.id,
+                created_by: user!.id,
+                name: 'Announcements',
+              });
+            }
+          } catch (err) {
+            console.error('Broadcast channel error:', err);
+          }
+        }
+      }
+      setShowSuccess(true);
+      setTimeout(() => navigate('/discover'), 2000);
+    } catch (err) {
+      console.error('Onboarding error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stepVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -24 : 24, opacity: 0 }),
+  };
+
+  const stepTitle = step === 'sports' ? getSportsStepTitle(data.selectedRoles) : STEP_TITLES[step];
+  const stepDesc = step === 'sports' ? getSportsStepDesc(data.selectedRoles) : STEP_DESCRIPTIONS[step];
+  const titleWords = stepTitle.split(' ');
+  const titleAccent = titleWords.pop();
+  const titleMain = titleWords.join(' ');
+
+  return (
+    <>
+      <style>{S}</style>
+      <div className="ob-root">
+        <div className="ob-court-bg" />
+        <div className="ob-hero-gradient" />
+        <div className="ob-grain" />
+        {/* Subtle court lines texture at bottom */}
+        <svg className="ob-court-lines" viewBox="0 0 480 320" preserveAspectRatio="xMidYMax meet" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="40" y="20" width="400" height="280" rx="2" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
+          <line x1="240" y1="20" x2="240" y2="300" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
+          <line x1="40" y1="160" x2="440" y2="160" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
+          <line x1="40" y1="90" x2="440" y2="90" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
+          <line x1="40" y1="230" x2="440" y2="230" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
+          <ellipse cx="240" cy="160" rx="52" ry="52" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+          <circle cx="240" cy="160" r="4" fill="rgba(255,255,255,0.08)"/>
+          <line x1="40" y1="20" x2="440" y2="300" stroke="rgba(22,212,106,0.04)" strokeWidth="0.8"/>
+          <line x1="440" y1="20" x2="40" y2="300" stroke="rgba(22,212,106,0.04)" strokeWidth="0.8"/>
+        </svg>
+        <div className="ob-orb" style={{ width: 360, height: 360, top: -100, right: -80 }} />
+        <div className="ob-orb" style={{ width: 260, height: 260, bottom: 80, left: -60, opacity: 0.55 }} />
+        <div className="ob-content">
+          <div className="ob-header">
+            <button className="ob-back-btn" onClick={handleBack} disabled={isFirstStep} aria-label="Back">
+              <ArrowLeft size={18} />
+            </button>
+            <div className="ob-progress-wrap">
+              <div className="ob-dots">
+                {steps.map((_, i) => (
+                  <div key={i} className={`ob-dot${i === currentStep ? ' active' : i < currentStep ? ' done' : ' future'}`} />
+                ))}
+              </div>
+              <span className="ob-step-counter">Step {currentStep + 1} of {steps.length}</span>
+            </div>
+            <button className="ob-skip-btn" onClick={handleSkip}>Skip</button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 120 }}>
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={step}
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div className="ob-divider" style={{ marginTop: 8 }} />
+                <h1 className="ob-step-title">{titleMain} <span>{titleAccent}</span></h1>
+                <p className="ob-step-desc">{stepDesc}</p>
+                <div className="ob-card">
+                  {step === 'roles' && <RolesStep data={data} setData={setData} />}
+                  {step === 'location_club' && <LocationClubStep data={data} setData={setData} user={user} />}
+                  {step === 'coach_sports' && <CoachSportsStep data={data} setData={setData} user={user} />}
+                  {step === 'coach_specialties' && <CoachSpecialtiesStep data={data} setData={setData} />}
+                  {step === 'coach_lessons' && <CoachLessonsStep data={data} setData={setData} />}
+                  {step === 'sports' && <SportsStep data={data} setData={setData} />}
+                  {step === 'skill' && <SkillStep data={data} setData={setData} />}
+                  {step === 'profile' && <ProfileStep data={data} setData={setData} onImagePickerChange={setImagePickerOpen} />}
+                  {step === 'availability' && <AvailabilityStep data={data} setData={setData} />}
+                  {step === 'bio' && <BioStep data={data} setData={setData} />}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Sticky CTA — outside ob-content so fixed positioning works correctly */}
+      <AnimatePresence>
+        {(step !== 'sports' || data.selectedSports.length > 0) && !imagePickerOpen && (
+          <motion.div
+            key="cta"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="ob-cta-sticky"
+          >
+            <button className={`ob-cta${btnPressed ? ' pressed' : ''}`} onClick={handleNext} disabled={
+              loading ||
+              (step === 'roles' && data.selectedRoles.length === 0) ||
+              (step === 'coach_sports' && data.coachSports.length === 0)
+            }>
+              {loading ? <div className="ob-spinner" /> : <span>{isLastStep ? 'Complete Setup' : 'Continue'}</span>}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSkipConfirm && <SkipConfirmModal onConfirm={confirmSkip} onCancel={() => setShowSkipConfirm(false)} />}
+        {showSuccess && <SuccessModal />}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function SkipConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="ob-modal-overlay" onClick={onCancel}>
+      <motion.div initial={{ scale: 0.92, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 20 }} transition={{ duration: 0.26, ease: [0.34, 1.56, 0.64, 1] }} className="ob-modal" onClick={e => e.stopPropagation()}>
+        <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.08, duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }} className="ob-modal-icon-wrap">
+          <AlertCircle size={22} color="var(--color-acc)" strokeWidth={2.2} />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, duration: 0.22 }}>
+          <p className="ob-modal-title">Skip Skill Level?</p>
+          <p className="ob-modal-desc">This helps us match you with similar players. Are you sure you want to skip?</p>
+        </motion.div>
+        <div className="ob-modal-btns">
+          <button className="ob-modal-btn-primary" onClick={onConfirm}>Skip Anyway</button>
+          <button className="ob-modal-btn-secondary" onClick={onCancel}>Go Back</button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function SuccessModal() {
+  // Staggered particle dots for visual energy
+  const particles = Array.from({ length: 12 }, (_, i) => ({
+    angle: (i / 12) * 360,
+    delay: i * 0.04,
+    dist: 60 + Math.random() * 40,
+  }));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'var(--color-bg)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Background glow orbs */}
+      <div style={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(22,212,106,0.18) 0%, transparent 70%)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(22,212,106,0.12) 0%, transparent 70%)', top: '30%', right: '-10%', pointerEvents: 'none' }} />
+
+      {/* Animated ring + check */}
+      <div style={{ position: 'relative', marginBottom: 48 }}>
+        {/* Outer pulse ring */}
+        <motion.div
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.2, 0.5] }}
+          transition={{ delay: 0.3, duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            position: 'absolute', inset: -24,
+            borderRadius: '50%',
+            border: '1px solid rgba(22,212,106,0.4)',
+          }}
+        />
+        {/* Middle ring */}
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.15, duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+          style={{
+            position: 'absolute', inset: -12,
+            borderRadius: '50%',
+            border: '1px solid rgba(22,212,106,0.25)',
+          }}
+        />
+        {/* Check circle */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+          style={{
+            width: 88, height: 88, borderRadius: '50%',
+            background: 'var(--color-acc)',
+            boxShadow: '0 0 0 1px rgba(22,212,106,0.5), 0 0 60px rgba(22,212,106,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
+          >
+            <Check size={38} color="var(--color-bg)" strokeWidth={2.5} />
+          </motion.div>
+        </motion.div>
+
+        {/* Burst particles */}
+        {particles.map((p, i) => (
+          <motion.div
+            key={i}
+            initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
+            animate={{
+              scale: [0, 1, 0],
+              opacity: [0, 1, 0],
+              x: Math.cos((p.angle * Math.PI) / 180) * p.dist,
+              y: Math.sin((p.angle * Math.PI) / 180) * p.dist,
+            }}
+            transition={{ delay: 0.45 + p.delay, duration: 0.7, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              top: '50%', left: '50%',
+              width: i % 3 === 0 ? 6 : 4,
+              height: i % 3 === 0 ? 6 : 4,
+              borderRadius: '50%',
+              background: i % 2 === 0 ? 'var(--color-acc)' : '#fff',
+              marginTop: -3, marginLeft: -3,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Text */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        style={{ textAlign: 'center', padding: '0 32px' }}
+      >
+        <p style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 900,
+          fontSize: 'clamp(2.4rem, 11vw, 3.2rem)',
+          textTransform: 'uppercase',
+          letterSpacing: '-0.5px',
+          lineHeight: 1.05,
+          color: 'var(--color-t1)',
+          margin: '0 0 6px',
+        }}>
+          You're <span style={{ color: 'var(--color-acc)' }}>in.</span>
+        </p>
+        <p style={{
+          fontFamily: 'var(--font-body)',
+          fontWeight: 500,
+          fontSize: '1rem',
+          color: 'var(--color-t2)',
+          margin: '0 0 40px',
+          lineHeight: 1.5,
+        }}>
+          Your profile is live. Time to find your next match.
+        </p>
+
+        {/* Loading bar */}
+        <div style={{ width: 160, height: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 2, margin: '0 auto', overflow: 'hidden' }}>
+          <motion.div
+            initial={{ width: '0%' }}
+            animate={{ width: '100%' }}
+            transition={{ delay: 0.7, duration: 1.8, ease: 'linear' }}
+            style={{ height: '100%', background: `linear-gradient(90deg, var(--color-acc), var(--color-acc))`, borderRadius: 2 }}
+          />
+        </div>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9 }}
+          style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-t3)', marginTop: 12 }}
+        >
+          Taking you to discover
+        </motion.p>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function SportsStep({ data, setData }: StepProps) {
+  const toggleSport = (sport: SportType) => {
+    setData(prev => ({
+      ...prev,
+      selectedSports: prev.selectedSports.includes(sport) ? prev.selectedSports.filter(s => s !== sport) : [...prev.selectedSports, sport],
+    }));
+  };
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {Object.entries(SPORTS).map(([key, sport]) => {
+        const isSelected = data.selectedSports.includes(key as SportType);
+        const imageUrl = SPORT_IMAGES[key];
+        return (
+          <motion.button key={key} onClick={() => toggleSport(key as SportType)} whileTap={{ scale: 0.96 }} className={`ob-sport-card${isSelected ? ' selected' : ''}`} style={{ background: 'none', padding: 0 }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: imageUrl ? `url(${imageUrl})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+              <div style={{ position: 'absolute', inset: 0, background: isSelected ? 'rgba(22,212,106,0.35)' : 'rgba(0,0,0,0.55)', transition: 'background 0.2s' }} />
+            </div>
+            <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+              <AnimatePresence>
+                {isSelected && (
+                  <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} transition={{ duration: 0.2, ease: [0.34, 1.56, 0.64, 1] }} style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', background: 'var(--color-acc)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Check size={12} color="var(--color-bg)" strokeWidth={3} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#fff', textAlign: 'center', lineHeight: 1.2, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                {sport.name}
+              </span>
+            </div>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Consistent green accent for all sport cards — elevated surface, brand-aligned
+const SPORT_ACCENT = { bg: 'linear-gradient(180deg, rgba(22,212,106,0.1) 0%, rgba(10,30,20,0.06) 100%)', border: 'var(--color-bdr)', icon: 'var(--color-acc)' };
+
+// Inline SVG sport icons — proper racquet shapes, tilted 45°, clearly distinct per sport
+const SportIcon = ({ sport, color }: { sport: string; color: string }) => {
+  const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  switch (sport) {
+    case 'platform_tennis':
+    case 'tennis':
+    case 'real_tennis':
+    case 'beach_tennis':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <ellipse cx="9" cy="9" rx="6" ry="7" transform="rotate(-45 9 9)" {...s}/>
+          <line x1="5" y1="9" x2="13" y2="9" {...s} strokeOpacity="0.6"/>
+          <line x1="9" y1="5" x2="9" y2="13" {...s} strokeOpacity="0.6"/>
+          <line x1="13.5" y1="13.5" x2="20" y2="20" {...s} strokeWidth={2.2}/>
+        </svg>
+      );
+    case 'padel':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="3" width="10" height="12" rx="2" transform="rotate(-40 9 9)" {...s}/>
+          <circle cx="8" cy="8" r="1" fill={color} stroke="none"/>
+          <circle cx="11" cy="11" r="1" fill={color} stroke="none"/>
+          <line x1="15" y1="15" x2="20" y2="20" {...s} strokeWidth={2.2}/>
+        </svg>
+      );
+    case 'squash':
+    case 'racquetball':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <ellipse cx="9" cy="8" rx="5" ry="6.5" transform="rotate(-35 9 8)" {...s}/>
+          <line x1="6" y1="8" x2="12" y2="8" {...s} strokeOpacity="0.5"/>
+          <line x1="9" y1="5" x2="9" y2="11" {...s} strokeOpacity="0.5"/>
+          <line x1="13" y1="13" x2="20" y2="20" {...s} strokeWidth={2.2}/>
+        </svg>
+      );
+    case 'pickleball':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <ellipse cx="9" cy="8" rx="6" ry="5" transform="rotate(-40 9 8)" {...s}/>
+          <circle cx="7" cy="7" r="1" fill={color} stroke="none"/>
+          <circle cx="10" cy="9" r="1" fill={color} stroke="none"/>
+          <circle cx="11" cy="6" r="1" fill={color} stroke="none"/>
+          <line x1="13" y1="13" x2="20" y2="20" {...s} strokeWidth={2.2}/>
+        </svg>
+      );
+    case 'badminton':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="17" cy="7" r="3.5" {...s}/>
+          <line x1="14.5" y1="9.5" x2="5" y2="19" {...s} strokeWidth={2.2}/>
+          <line x1="15" y1="7" x2="6" y2="16" {...s} strokeOpacity="0.5"/>
+          <line x1="17" y1="10" x2="8" y2="19" {...s} strokeOpacity="0.5"/>
+        </svg>
+      );
+    case 'golf':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <line x1="6" y1="3" x2="14" y2="18" {...s} strokeWidth={2}/>
+          <path d="M14 18 l4 -2" {...s} strokeWidth={2.5}/>
+          <circle cx="18" cy="20" r="2" {...s}/>
+        </svg>
+      );
+    case 'table_tennis':
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="9" cy="9" r="6" {...s}/>
+          <line x1="3" y1="9" x2="15" y2="9" {...s} strokeOpacity="0.5"/>
+          <line x1="13.5" y1="13.5" x2="20" y2="20" {...s} strokeWidth={2.2}/>
+          <circle cx="20" cy="5" r="2.5" {...s}/>
+        </svg>
+      );
+    default:
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <ellipse cx="9" cy="9" rx="6" ry="7" transform="rotate(-45 9 9)" {...s}/>
+          <line x1="5" y1="9" x2="13" y2="9" {...s} strokeOpacity="0.6"/>
+          <line x1="9" y1="5" x2="9" y2="13" {...s} strokeOpacity="0.6"/>
+          <line x1="13.5" y1="13.5" x2="20" y2="20" {...s} strokeWidth={2.2}/>
+        </svg>
+      );
+  }
+};
+
+
+function SkillStep({ data, setData }: StepProps) {
+  const SKILL_META = [
+    { label: 'Beginner',     desc: 'Just trying out, learning the basics' },
+    { label: 'Intermediate', desc: 'Comfortable playing, improving consistency' },
+    { label: 'Advanced',     desc: 'Competitive player, strong technique' },
+    { label: 'Expert',       desc: 'Tournament-level, highly competitive' },
+  ];
+
+  if (data.selectedSports.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '32px 0' }}>
+        <div className="ob-icon-box" style={{ width: 52, height: 52, margin: '0 auto 12px', borderRadius: '50%' }}>
+          <AlertCircle size={22} color="var(--color-acc)" strokeWidth={2.2} />
+        </div>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--color-t2)' }}>Select at least one sport first.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {data.selectedSports.map((sport, i) => {
+        const sportInfo = SPORTS[sport];
+        const currentLevel = data.sportLevels[sport] ?? 1;
+        const fillPct = (currentLevel / (SKILL_META.length - 1)) * 100;
+
+        return (
+          <motion.div
+            key={sport}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.07, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="ob-sport-section"
+            style={{
+              background: SPORT_ACCENT.bg,
+              borderColor: SPORT_ACCENT.border,
+            }}
+          >
+            {/* Blurred sport photo background */}
+            {SPORT_IMAGES[sport] && (
+              <div
+                className="ob-sport-section-bg"
+                style={{ backgroundImage: `url(${SPORT_IMAGES[sport]})` }}
+              />
+            )}
+
+            <div className="ob-sport-section-content">
+            {/* Sport name header */}
+            <p className="ob-sport-section-name">
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <SportIcon sport={sport} color={SPORT_ACCENT.icon} />
+                </span>
+                {sportInfo?.name || sport}
+              </span>
+            </p>
+
+            <div className="ob-skill-slider-wrap">
+              {/* Current level + description */}
+              <motion.div
+                key={currentLevel}
+                initial={{ opacity: 0, y: 4, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="ob-skill-inline"
+              >
+                <span className="ob-skill-inline-name">{SKILL_META[currentLevel].label}</span>
+                <span className="ob-skill-inline-desc">{SKILL_META[currentLevel].desc}</span>
+              </motion.div>
+
+              {/* Slider */}
+              <div className="ob-slider-track-wrap">
+                <div className="ob-slider-track">
+                  <div className="ob-slider-fill" style={{ width: `${fillPct}%` }} />
+                  <div className="ob-slider-ticks">
+                    {SKILL_META.map((_, idx) => (
+                      <div key={idx} className={`ob-slider-tick${idx < currentLevel ? ' passed' : idx === currentLevel ? ' current' : ''}`} />
+                    ))}
+                  </div>
+                  <div className="ob-slider-thumb" style={{ left: `${fillPct}%` }} />
+                  <input
+                    type="range" min={0} max={SKILL_META.length - 1} step={1}
+                    value={currentLevel}
+                    onChange={e => setData(prev => ({ ...prev, sportLevels: { ...prev.sportLevels, [sport]: Number(e.target.value) } }))}
+                    className="ob-slider-input"
+                    aria-label={`Skill level for ${sportInfo?.name || sport}`}
+                  />
+                </div>
+                <div className="ob-slider-labels">
+                  {SKILL_META.map((meta, idx) => (
+                    <span
+                      key={idx}
+                      className={`ob-slider-label${idx === currentLevel ? ' active' : ''}`}
+                      onClick={() => setData(prev => ({ ...prev, sportLevels: { ...prev.sportLevels, [sport]: idx } }))}
+                    >
+                      {meta.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* PTI rating — anchored under the slider */}
+              {sportInfo?.officialRatingSystem && (
+                <div>
+                  <button
+                    className="ob-rating-toggle"
+                    onClick={() => setData(prev => ({ ...prev, showRatings: { ...prev.showRatings, [sport]: !prev.showRatings[sport] } }))}
+                  >
+                    <span>Have a {sportInfo.officialRatingSystem} rating?</span>
+                    <ChevronDown size={12} style={{ transform: data.showRatings[sport] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </button>
+                  <AnimatePresence>
+                    {data.showRatings[sport] && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} style={{ overflow: 'hidden' }}>
+                        <div style={{ marginTop: 10 }}>
+                          <input
+                            className="ob-input"
+                            placeholder={`Enter your ${sportInfo.officialRatingSystem} rating`}
+                            value={data.externalRatings[sport] || ''}
+                            onChange={e => setData(prev => ({ ...prev, externalRatings: { ...prev.externalRatings, [sport]: e.target.value } }))}
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+function ProfileStep({ data, setData, onImagePickerChange }: StepProps & { onImagePickerChange?: (open: boolean) => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <ImageUpload value={data.avatarUrl} name={data.fullName} onChange={(url, file) => setData(prev => ({ ...prev, avatarUrl: url || '', avatarFile: file }))} onOpenChange={onImagePickerChange} size="xl" />
+      </div>
+      <div>
+        <label className="ob-label">Full Name</label>
+        <input className="ob-input" placeholder="Enter your name" value={data.fullName} onChange={e => setData(prev => ({ ...prev, fullName: e.target.value }))} />
+      </div>
+    </div>
+  );
+}
+
+function AvailabilityStep({ data, setData }: StepProps) {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const toggleDay = (dayIndex: number) => {
+    setData(prev => {
+      const existing = prev.availability.find(a => a.day === dayIndex);
+      if (existing) return { ...prev, availability: prev.availability.filter(a => a.day !== dayIndex) };
+      return { ...prev, availability: [...prev.availability, { day: dayIndex, ranges: [{ start: '18:00', end: '21:00' }] }] };
+    });
+  };
+  const selectedDays = [...data.availability].sort((a, b) => a.day - b.day);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+        {days.map((day, index) => {
+          const isSelected = data.availability.some(a => a.day === index);
+          return (
+            <motion.button key={index} onClick={() => toggleDay(index)} whileTap={{ scale: 0.92 }} className={`ob-day-btn${isSelected ? ' active' : ''}`}>
+              {day}
+            </motion.button>
+          );
+        })}
+      </div>
+      <AnimatePresence mode="popLayout">
+        {selectedDays.length > 0 && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {selectedDays.map(entry => (
+              <motion.div key={entry.day} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
+                <TimeRangePicker dayLabel={fullDays[entry.day]} ranges={entry.ranges} onChange={ranges => setData(prev => ({ ...prev, availability: prev.availability.map(a => a.day === entry.day ? { ...a, ranges } : a) }))} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {selectedDays.length === 0 && (
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--color-t3)', textAlign: 'center', padding: '12px 0' }}>
+          Select the days you're typically available to play
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RolesStep({ data, setData }: StepProps) {
+  const isPlayerSelected = data.selectedRoles.includes('player');
+  const isCoachSelected = data.selectedRoles.includes('coach');
+  const isClubAdminSelected = data.selectedRoles.includes('club_admin');
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+      {/* Player — toggleable */}
+      <div
+        className={`ob-role-card${isPlayerSelected ? ' selected' : ''}`}
+        onClick={() => setData(prev => ({ ...prev, selectedRoles: toggleRole(prev.selectedRoles, 'player') }))}
+      >
+        {isPlayerSelected && (
+          <div className="ob-role-card-check">
+            <Check size={11} color="var(--color-bg)" strokeWidth={3} />
+          </div>
+        )}
+        <span className="ob-role-card-icon">🎾</span>
+        <span className="ob-role-card-title">Player</span>
+        <span className="ob-role-card-desc">Find matches &amp; connect</span>
+      </div>
+
+      {/* Coach — toggleable */}
+      <div
+        className={`ob-role-card${isCoachSelected ? ' selected' : ''}`}
+        onClick={() => setData(prev => ({ ...prev, selectedRoles: toggleRole(prev.selectedRoles, 'coach') }))}
+      >
+        {isCoachSelected && (
+          <div className="ob-role-card-check">
+            <Check size={11} color="var(--color-bg)" strokeWidth={3} />
+          </div>
+        )}
+        <span className="ob-role-card-icon">🏆</span>
+        <span className="ob-role-card-title">Coach</span>
+        <span className="ob-role-card-desc">Teach &amp; build your roster</span>
+      </div>
+
+      {/* Club Admin — toggleable */}
+      <div
+        className={`ob-role-card${isClubAdminSelected ? ' selected' : ''}`}
+        onClick={() => setData(prev => ({ ...prev, selectedRoles: toggleRole(prev.selectedRoles, 'club_admin') }))}
+      >
+        {isClubAdminSelected && (
+          <div className="ob-role-card-check">
+            <Check size={11} color="var(--color-bg)" strokeWidth={3} />
+          </div>
+        )}
+        <span className="ob-role-card-icon">🏟️</span>
+        <span className="ob-role-card-title">Club Admin</span>
+        <span className="ob-role-card-desc">Manage your club</span>
+      </div>
+
+      {/* Competition Organizer — coming soon, non-interactive */}
+      <div
+        className="ob-role-card"
+        style={{ opacity: 0.38, pointerEvents: 'none' }}
+      >
+        <span className="ob-coming-soon-badge">Coming Soon</span>
+        <span className="ob-role-card-icon">🗓️</span>
+        <span className="ob-role-card-title">Organizer</span>
+        <span className="ob-role-card-desc">Run tournaments</span>
+      </div>
+    </div>
+  );
+}
+
+interface CoachStepProps extends StepProps {
+  user: { id: string } | null;
+}
+
+function CoachSportsStep({ data, setData, user }: CoachStepProps) {
+  useEffect(() => {
+    async function ensureCoachProfile() {
+      if (data.coachProfileId || !user) return;
+      try {
+        const { data: cp } = await (supabase as any)
+          .from('coach_profiles')
+          .insert({ user_id: user.id, is_active: false })
+          .select('id')
+          .single();
+        if (cp) setData(prev => ({ ...prev, coachProfileId: cp.id }));
+      } catch (err) {
+        console.error('ensureCoachProfile error:', err);
+      }
+    }
+    ensureCoachProfile();
+  }, []);
+
+  const toggleSport = (sport: SportType) => {
+    setData(prev => ({
+      ...prev,
+      coachSports: prev.coachSports.includes(sport)
+        ? prev.coachSports.filter(s => s !== sport)
+        : [...prev.coachSports, sport],
+    }));
+  };
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {Object.entries(SPORTS).map(([key, sport]) => {
+        const isSelected = data.coachSports.includes(key as SportType);
+        const imageUrl = SPORT_IMAGES[key];
+        return (
+          <motion.button
+            key={key}
+            onClick={() => toggleSport(key as SportType)}
+            whileTap={{ scale: 0.96 }}
+            className={`ob-sport-card${isSelected ? ' selected' : ''}`}
+            style={{ background: 'none', padding: 0 }}
+          >
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: imageUrl ? `url(${imageUrl})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+              <div style={{ position: 'absolute', inset: 0, background: isSelected ? 'rgba(22,212,106,0.35)' : 'rgba(0,0,0,0.55)', transition: 'background 0.2s' }} />
+            </div>
+            <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+              <AnimatePresence>
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: [0.34, 1.56, 0.64, 1] }}
+                    style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', background: 'var(--color-acc)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Check size={12} color="var(--color-bg)" strokeWidth={3} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#fff', textAlign: 'center', lineHeight: 1.2, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
+                {sport.name}
+              </span>
+            </div>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CoachSpecialtiesStep({ data, setData }: StepProps) {
+  const [customInputs, setCustomInputs] = useState<Record<string, string>>(
+    () => Object.fromEntries(data.coachSports.map(s => [s, '']))
+  );
+
+  const toggleSpecialty = (sport: SportType, specialty: string) => {
+    setData(prev => {
+      const current = prev.coachSpecialties[sport] ?? [];
+      const updated = current.includes(specialty)
+        ? current.filter(s => s !== specialty)
+        : [...current, specialty];
+      return { ...prev, coachSpecialties: { ...prev.coachSpecialties, [sport]: updated } };
+    });
+  };
+
+  const addCustomTag = (sport: SportType) => {
+    const val = (customInputs[sport] ?? '').trim();
+    if (!val) return;
+    const current = data.coachSpecialties[sport] ?? [];
+    if (current.includes(val)) return;
+    setData(prev => ({
+      ...prev,
+      coachSpecialties: { ...prev.coachSpecialties, [sport]: [...(prev.coachSpecialties[sport] ?? []), val] },
+    }));
+    setCustomInputs(prev => ({ ...prev, [sport]: '' }));
+  };
+
+  const removeCustomTag = (sport: SportType, tag: string) => {
+    setData(prev => ({
+      ...prev,
+      coachSpecialties: { ...prev.coachSpecialties, [sport]: (prev.coachSpecialties[sport] ?? []).filter(s => s !== tag) },
+    }));
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {data.coachSports.map(sport => {
+        const predefined = COACH_SPECIALTIES[sport] ?? [];
+        const selected = data.coachSpecialties[sport] ?? [];
+        const customTags = selected.filter(s => !predefined.includes(s));
+
+        return (
+          <div key={sport}>
+            <p className="ob-specialty-group-label" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-t2)', marginBottom: 10 }}>
+              {SPORTS[sport]?.name ?? sport}
+            </p>
+
+            {/* Predefined specialty chips */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              {predefined.map(specialty => (
+                <button
+                  key={specialty}
+                  className={`ob-skill-btn${selected.includes(specialty) ? ' active' : ''}`}
+                  onClick={() => toggleSpecialty(sport, specialty)}
+                >
+                  {specialty}
+                </button>
+              ))}
+
+              {/* Custom tags */}
+              {customTags.map(tag => (
+                <div key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span className="ob-skill-btn active" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {tag}
+                    <button
+                      onClick={() => removeCustomTag(sport, tag)}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-bg)', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '1rem' }}
+                      aria-label={`Remove ${tag}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Free-text input */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="ob-input"
+                placeholder="Add custom specialty..."
+                value={customInputs[sport] ?? ''}
+                onChange={e => setCustomInputs(prev => ({ ...prev, [sport]: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(sport); } }}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="ob-skill-btn"
+                onClick={() => addCustomTag(sport)}
+                style={{ flexShrink: 0, padding: '10px 16px' }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CoachLessonsStep({ data, setData }: StepProps) {
+  useEffect(() => {
+    if (data.coachLessons.length === 0) {
+      setData(prev => ({ ...prev, coachLessons: DEFAULT_LESSONS }));
+    }
+  }, []);
+
+  const updateLesson = (id: string, field: keyof LessonPackage, value: string | number | boolean | null) => {
+    setData(prev => ({
+      ...prev,
+      coachLessons: prev.coachLessons.map(l => l.id === id ? { ...l, [field]: value } : l),
+    }));
+  };
+
+  const removeLesson = (id: string) => {
+    setData(prev => ({ ...prev, coachLessons: prev.coachLessons.filter(l => l.id !== id) }));
+  };
+
+  const addLesson = () => {
+    const newLesson: LessonPackage = {
+      id: crypto.randomUUID(),
+      name: '',
+      durationMinutes: 60,
+      price: null,
+      currency: 'USD',
+      isPackage: false,
+      packageCount: null,
+    };
+    setData(prev => ({ ...prev, coachLessons: [...prev.coachLessons, newLesson] }));
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {data.coachLessons.map(lesson => (
+        <div key={lesson.id} className="ob-lesson-row" style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--color-surf)', border: '1px solid var(--color-bdr)', borderRadius: 12, padding: '14px 14px 12px' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              className="ob-input"
+              placeholder="Lesson name"
+              value={lesson.name}
+              onChange={e => updateLesson(lesson.id, 'name', e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              onClick={() => removeLesson(lesson.id)}
+              style={{ background: 'none', border: 'none', color: 'var(--color-t2)', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1, padding: '0 4px', flexShrink: 0 }}
+              aria-label="Remove lesson"
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              className="ob-input"
+              type="number"
+              placeholder="Duration (min)"
+              value={lesson.durationMinutes}
+              onChange={e => updateLesson(lesson.id, 'durationMinutes', Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <input
+              className="ob-input"
+              type="number"
+              placeholder="Price"
+              value={lesson.price ?? ''}
+              onChange={e => updateLesson(lesson.id, 'price', e.target.value === '' ? null : Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <select
+              className="ob-input"
+              value={lesson.currency}
+              onChange={e => updateLesson(lesson.id, 'currency', e.target.value)}
+              style={{ flex: 1 }}
+            >
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="CAD">CAD</option>
+              <option value="AUD">AUD</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className={`ob-skill-btn${lesson.isPackage ? ' active' : ''}`}
+              onClick={() => updateLesson(lesson.id, 'isPackage', !lesson.isPackage)}
+            >
+              Package
+            </button>
+            {lesson.isPackage && (
+              <input
+                className="ob-input"
+                type="number"
+                placeholder="# sessions"
+                value={lesson.packageCount ?? ''}
+                onChange={e => updateLesson(lesson.id, 'packageCount', e.target.value === '' ? null : Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+            )}
+          </div>
+        </div>
+      ))}
+      <button className="ob-skill-btn" onClick={addLesson} style={{ marginTop: 4 }}>
+        + Add lesson
+      </button>
+    </div>
+  );
+}
+
+function LocationClubStep({ data, setData, user }: CoachStepProps) {
+  const { ready } = useGoogleMaps();
+  const [query, setQuery] = useState('');
+  const [selectedClub, setSelectedClub] = useState<SelectedClub | null>(null);
+  const [membershipRole, setMembershipRole] = useState<ClubRole>('player');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const { results, loading } = useClubSearch(
+    query,
+    data.locationLat,
+    data.locationLng,
+    data.selectedSports.length > 0 ? data.selectedSports : data.coachSports
+  );
+
+  // GPS detection on mount; IP fallback already handled by OnboardingPage useEffect
+  useEffect(() => {
+    if (data.locationDetected) return;
+    navigator.geolocation?.getCurrentPosition(
+      pos => setData(prev => ({
+        ...prev,
+        locationLat: pos.coords.latitude,
+        locationLng: pos.coords.longitude,
+        locationDetected: true,
+      })),
+      () => { /* IP fallback already running */ }
+    );
+  }, []);
+
+  const confirmClub = () => {
+    if (!selectedClub) return;
+    if (!data.selectedClubs.some(c => c.id === selectedClub.id)) {
+      setData(prev => ({
+        ...prev,
+        selectedClubs: [...prev.selectedClubs, { ...selectedClub, membershipRole }],
+      }));
+    }
+    setSelectedClub(null);
+    setQuery('');
+    setMembershipRole('player');
+  };
+
+  const removeClub = (clubId: string) => {
+    setData(prev => ({ ...prev, selectedClubs: prev.selectedClubs.filter(c => c.id !== clubId) }));
+  };
+
+  // Membership role options = intersection of {player, coach, club_admin} with selectedRoles,
+  // always including 'player'
+  const membershipOptions: ClubRole[] = ['player'];
+  if (data.selectedRoles.includes('coach')) membershipOptions.push('coach');
+  if (data.selectedRoles.includes('club_admin')) membershipOptions.push('club_admin');
+
+  const createClub = async () => {
+    const name = query.trim();
+    if (!name) return;
+    setCreateError(null);
+    const { data: newClub, error } = await (supabase as any)
+      .from('clubs')
+      .insert({ name, created_by: user?.id, is_verified: false })
+      .select('id, name, city, state, logo_url, cover_image_url, location_lat, location_lng')
+      .single();
+    if (error) {
+      setCreateError(error.message || 'Failed to create club. Please try again.');
+      return;
+    }
+    if (newClub) {
+      setSelectedClub(newClub as SelectedClub);
+      setQuery('');
+    }
+  };
+
+  const showCreateFallback = query.trim().length > 0 && results.length === 0 && !loading;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <input
+        className="ob-input"
+        placeholder="Search for a club or facility..."
+        value={query}
+        onChange={e => { setQuery(e.target.value); setCreateError(null); }}
+      />
+
+      {createError && (
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'rgba(255,100,100,0.9)', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <AlertCircle size={14} strokeWidth={2.2} />
+          {createError}
+        </p>
+      )}
+
+      {!ready && (
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--color-t2)', margin: 0 }}>
+          Search unavailable
+        </p>
+      )}
+
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+          <div className="ob-spinner" />
+        </div>
+      )}
+
+      {!loading && results.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {results.map(club => (
+            <button
+              key={club.id}
+              className="ob-club-result"
+              onClick={() => setSelectedClub(club)}
+            >
+              {club.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showCreateFallback && (
+        <button
+          className="ob-club-result"
+          onClick={createClub}
+        >
+          + Create "{query.trim()}"
+        </button>
+      )}
+
+      {selectedClub && (
+        <div style={{ background: 'var(--color-acc-bg)', border: '1px solid var(--color-bdr)', borderRadius: 12, padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-t2)', margin: 0 }}>
+            {selectedClub.name} — Join as
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {membershipOptions.map(role => (
+              <button
+                key={role}
+                className={`ob-skill-btn${membershipRole === role ? ' active' : ''}`}
+                onClick={() => setMembershipRole(role)}
+              >
+                {role === 'club_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
+              </button>
+            ))}
+          </div>
+          <button
+            className="ob-skill-btn active"
+            style={{ alignSelf: 'flex-start', padding: '10px 20px' }}
+            onClick={confirmClub}
+          >
+            Confirm
+          </button>
+        </div>
+      )}
+
+      {data.selectedClubs.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+          {data.selectedClubs.map(club => (
+            <div
+              key={club.id}
+              className="ob-club-chip"
+              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              <span>{club.name}</span>
+              <button
+                onClick={() => removeClub(club.id)}
+                style={{ background: 'none', border: 'none', color: 'var(--color-t1)', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '1rem' }}
+                aria-label={`Remove ${club.name}`}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BioStep({ data, setData }: StepProps) {
+  const maxLength = 280;
+  const remaining = maxLength - data.bio.length;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <textarea
+        className="ob-textarea"
+        placeholder="Tell opponents a bit about your game, playing style, or what you're looking for in a match..."
+        value={data.bio}
+        onChange={e => setData(prev => ({ ...prev, bio: e.target.value.slice(0, maxLength) }))}
+        rows={6}
+        style={{ borderColor: remaining < 20 && remaining > 0 ? 'rgba(255,180,0,0.5)' : remaining === 0 ? 'rgba(255,60,60,0.5)' : undefined }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: 'var(--color-t3)' }}>Optional — you can add this later</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.82rem', color: remaining < 20 && remaining > 0 ? 'rgba(255,180,0,0.8)' : remaining === 0 ? 'rgba(255,60,60,0.8)' : 'var(--color-t3)' }}>
+          {remaining}
+        </span>
+      </div>
+    </div>
+  );
+}

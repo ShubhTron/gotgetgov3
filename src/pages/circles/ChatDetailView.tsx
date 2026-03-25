@@ -2,8 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import {
   Avatar,
   IconArrowLeft,
-  IconPhone,
-  IconVideo,
 } from '../../design-system';
 import { ChatBubble } from '../../components/circles/ChatBubble';
 import { MessageComposer } from '../../components/circles/MessageComposer';
@@ -175,9 +173,9 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
           <div style={{ minWidth: 0 }}>
             <p
               style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'],
+                fontFamily: 'var(--font-display)',
+                fontSize: 17,
+                fontWeight: 700,
                 color: 'var(--color-t1)',
                 margin: 0,
                 overflow: 'hidden',
@@ -190,12 +188,12 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
             <p
               style={{
                 fontFamily: 'var(--font-body)',
-                fontSize: 10,
+                fontSize: 12,
                 color: online ? 'var(--color-acc)' : 'var(--color-t3)',
-                fontWeight: online ? 600 : 400,
+                fontWeight: online ? 700 : 400,
                 margin: 0,
                 textTransform: online ? 'uppercase' : 'none',
-                letterSpacing: online ? '0.04em' : 0,
+                letterSpacing: online ? '0.06em' : 0,
               }}
             >
               {online ? 'Online' : formatLastSeen(otherProfile?.last_seen ?? null)}
@@ -203,15 +201,6 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
           </div>
         </div>
 
-        {/* Action icons */}
-        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-          <HeaderIconButton aria-label="Voice call">
-            <IconPhone size={19} />
-          </HeaderIconButton>
-          <HeaderIconButton aria-label="Video call">
-            <IconVideo size={19} />
-          </HeaderIconButton>
-        </div>
       </div>
 
       {/* ── Message scroll area ──────────────────────────────────────────── */}

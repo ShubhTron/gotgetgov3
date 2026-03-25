@@ -1,51 +1,86 @@
-import { useState, type ReactNode } from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { useTheme } from './hooks/useTheme';
-import { Header } from './components/layout/Header';
-import { BottomTabBar, type TabId } from './components/layout/BottomTabBar';
-import { DiscoverPage } from './pages/DiscoverPage';
-import { PlayPage } from './pages/PlayPage';
-import { ConnectPage } from './pages/ConnectPage';
-import { MePage } from './pages/MePage';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { FilterProvider } from './contexts/FilterContext';
+import { FullscreenProvider } from './contexts/FullscreenContext';
+import { AppShell } from './components/layout/AppShell';
+import { ProtectedRoute } from './components/routing/ProtectedRoute';
+import { PublicRoute } from './components/routing/PublicRoute';
+import { GuestRoute } from './components/routing/GuestRoute';
 
-function Shell() {
-  const { profile } = useAuth();
-  const dbTheme = (profile as any)?.dark_mode === true ? 'dark' as const : (profile as any)?.dark_mode === false ? 'light' as const : null;
-  const { theme, toggle } = useTheme('light', dbTheme);
-  const [activeTab, setActiveTab] = useState<TabId>('discover');
+// Auth
+import { LandingPage } from './pages/auth/LandingPage';
+import { AuthCallback } from './pages/auth/AuthCallback';
 
-  const pageMap: Record<TabId, ReactNode> = {
-    discover: <DiscoverPage />,
-    play:     <PlayPage />,
-    connect:  <ConnectPage />,
-    me:       <MePage />,
-  };
+// Onboarding
+import { OnboardingPage } from './pages/onboarding/OnboardingPage';
 
+// Main pages
+import { DiscoverPage } from './pages/discover/DiscoverPage';
+import { NewsPage } from './pages/news/NewsPage';
+import { SchedulePage } from './pages/schedule/SchedulePage';
+import { ResultsPage } from './pages/results/ResultsPage';
+import { CirclesPage } from './pages/circles/CirclesPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
+import { NotificationsPage } from './pages/notifications/NotificationsPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
+import { MySportsPage } from './pages/sports/MySportsPage';
+
+// Create flows
+import {
+  CreateMatchPage,
+  CreateEventPage,
+  CreateCompetitionPage,
+  CreateCirclePage,
+  CreateAnnouncementPage,
+  EditCirclePage,
+} from './pages/create';
+
+function AppRoutes() {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column',
-      height: '100dvh', overflow: 'hidden',
-      background: 'var(--color-bg)',
-      maxWidth: 430, margin: '0 auto',
-    }}>
-      <Header
-        userAvatarUrl={profile?.avatar_url ?? undefined}
-        userName={profile?.full_name ?? 'User'}
-        theme={theme}
-        onThemeToggle={toggle}
-      />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingBottom: 83 }}>
-        {pageMap[activeTab]}
-      </div>
-      <BottomTabBar active={activeTab} onChange={setActiveTab} />
-    </div>
+    <Routes>
+      {/* Auth */}
+      <Route path="/auth" element={<PublicRoute><LandingPage /></PublicRoute>} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+
+      {/* Onboarding */}
+      <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+
+      {/* Main tabs (GuestRoute = accessible when auth OR guest) */}
+      <Route path="/discover" element={<GuestRoute><AppShell><DiscoverPage /></AppShell></GuestRoute>} />
+      <Route path="/news"     element={<GuestRoute><AppShell><NewsPage /></AppShell></GuestRoute>} />
+      <Route path="/schedule" element={<GuestRoute><AppShell><SchedulePage /></AppShell></GuestRoute>} />
+      <Route path="/results"  element={<GuestRoute><AppShell><ResultsPage /></AppShell></GuestRoute>} />
+      <Route path="/circles"  element={<GuestRoute><AppShell><CirclesPage /></AppShell></GuestRoute>} />
+      <Route path="/profile"  element={<GuestRoute><AppShell><ProfilePage /></AppShell></GuestRoute>} />
+      <Route path="/notifications" element={<GuestRoute><AppShell><NotificationsPage /></AppShell></GuestRoute>} />
+      <Route path="/settings" element={<GuestRoute><AppShell><SettingsPage /></AppShell></GuestRoute>} />
+
+      {/* Protected routes */}
+      <Route path="/sports"              element={<ProtectedRoute><MySportsPage /></ProtectedRoute>} />
+      <Route path="/match/new"           element={<ProtectedRoute><CreateMatchPage /></ProtectedRoute>} />
+      <Route path="/event/new"           element={<ProtectedRoute><CreateEventPage /></ProtectedRoute>} />
+      <Route path="/competition/new"     element={<ProtectedRoute><CreateCompetitionPage /></ProtectedRoute>} />
+      <Route path="/circle/new"          element={<ProtectedRoute><CreateCirclePage /></ProtectedRoute>} />
+      <Route path="/announcement/new"    element={<ProtectedRoute><CreateAnnouncementPage /></ProtectedRoute>} />
+      <Route path="/:type/:id/edit"      element={<ProtectedRoute><EditCirclePage /></ProtectedRoute>} />
+
+      {/* Fallbacks */}
+      <Route path="/" element={<Navigate to="/discover" replace />} />
+      <Route path="*" element={<Navigate to="/discover" replace />} />
+    </Routes>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Shell />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <FilterProvider>
+          <FullscreenProvider>
+            <AppRoutes />
+          </FullscreenProvider>
+        </FilterProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

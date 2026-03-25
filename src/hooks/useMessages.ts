@@ -81,13 +81,13 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       }
 
       // Pre-warm the profile cache for all unique senders
-      const uniqueSenderIds = [...new Set(rawMessages.map((m) => m.sender_id))];
+      const uniqueSenderIds = [...new Set(rawMessages.map((m: any) => m.sender_id))];
       const { data: senderProfiles } = await supabase
         .from('profiles')
         .select('*')
         .in('id', uniqueSenderIds);
 
-      (senderProfiles ?? []).forEach((p) => {
+      (senderProfiles ?? []).forEach((p: any) => {
         profileCacheRef.current.set(p.id, p as Profile);
       });
 
@@ -190,7 +190,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         conversation_id: conversationId,
         sender_id: user.id,
         content: trimmed,
-      });
+      } as any);
 
       if (insertErr) {
         // Roll back the optimistic message on failure
