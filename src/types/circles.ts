@@ -71,3 +71,17 @@ export interface StoryItem {
 // ─── Prefix constant for sport card messages ──────────────────────────────────
 
 export const SPORT_CARD_PREFIX = '__SPORT_CARD__:';
+
+// ─── Match proposal embedded in a message ─────────────────────────────────────
+
+/** Stored in message.content as: __MATCH_PROPOSAL__:{json} */
+export interface MatchProposalPayload {
+  date: string;                                            // "2026-03-28"
+  timeOfDay: 'morning' | 'afternoon' | 'evening';
+  location?: string;
+  sport?: string;
+  status: 'pending' | 'accepted' | 'declined' | 'counter';
+  proposedBy: string;                                      // sender user_id
+}
+
+export const MATCH_PROPOSAL_PREFIX = '__MATCH_PROPOSAL__:';

@@ -8,6 +8,7 @@ import { CreateMenu, type CreateMenuItem } from './CreateMenu';
 import { SearchModal } from './SearchModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { FilterProvider, useFilters } from '../../contexts/FilterContext';
+import { NavVisibilityProvider, useNavVisibility } from '../../contexts/NavVisibilityContext';
 import { supabase } from '../../lib/supabase';
 import { SPORTS, type SportType } from '../../types';
 import { cn } from '../../lib/utils';
@@ -286,11 +287,13 @@ function AppShellContent({ children }: AppShellProps) {
         {children}
       </main>
 
-      {/* Mobile tab bar */}
-      <BottomTabBar
-        unreadMessages={unreadMessages}
-        onCreateClick={() => setIsCreateMenuOpen(true)}
-      />
+      {/* Mobile tab bar — hidden when in conversation view */}
+      {!useNavVisibility().hideNav && (
+        <BottomTabBar
+          unreadMessages={unreadMessages}
+          onCreateClick={() => setIsCreateMenuOpen(true)}
+        />
+      )}
 
       {/* Overlays */}
       <SearchModal
@@ -310,9 +313,11 @@ function AppShellContent({ children }: AppShellProps) {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <FilterProvider>
-      <AppShellContent>{children}</AppShellContent>
-    </FilterProvider>
+    <NavVisibilityProvider>
+      <FilterProvider>
+        <AppShellContent>{children}</AppShellContent>
+      </FilterProvider>
+    </NavVisibilityProvider>
   );
 }
 

@@ -203,9 +203,10 @@ export function DiscoverPage() {
   const handleSwipeRight = useCallback(async (id: string) => {
     const player = players.find(p => p.id === id);
     if (!player || !user) return;
+    setSwipedIds(prev => new Set([...prev, id]));
     setLastSwipe({ id, direction: 'right' });
     setTriggerSwipe({ id, direction: 'right' });
-    setTimeout(() => setTriggerSwipe(null), 100);
+    setTimeout(() => setTriggerSwipe(null), 400);
     await (supabase.from('swipe_matches') as any).upsert({
       user_id: user.id, target_user_id: id, sport: player.sport, direction: 'right',
     }, { onConflict: 'user_id,target_user_id,sport' });
@@ -214,9 +215,10 @@ export function DiscoverPage() {
   const handleSwipeLeft = useCallback(async (id: string) => {
     const player = players.find(p => p.id === id);
     if (!player || !user) return;
+    setSwipedIds(prev => new Set([...prev, id]));
     setLastSwipe({ id, direction: 'left' });
     setTriggerSwipe({ id, direction: 'left' });
-    setTimeout(() => setTriggerSwipe(null), 100);
+    setTimeout(() => setTriggerSwipe(null), 400);
     await (supabase.from('swipe_matches') as any).upsert({
       user_id: user.id, target_user_id: id, sport: player.sport, direction: 'left',
     }, { onConflict: 'user_id,target_user_id,sport' });
@@ -231,6 +233,7 @@ export function DiscoverPage() {
       .eq('user_id', user.id)
       .eq('target_user_id', lastSwipe.id)
       .eq('sport', player.sport);
+    setSwipedIds(prev => { const n = new Set(prev); n.delete(lastSwipe.id); return n; });
     setUndoId(lastSwipe.id);
     setTimeout(() => setUndoId(null), 100);
     setLastSwipe(null);

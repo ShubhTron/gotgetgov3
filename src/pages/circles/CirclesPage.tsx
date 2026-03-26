@@ -4,7 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CirclesListView } from './CirclesListView';
 import { ChatDetailView } from './ChatDetailView';
 import { useConversations } from '../../hooks/useConversations';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavVisibility } from '../../contexts/NavVisibilityContext';
+import { getOrCreateDirectConversation } from '../../lib/messaging';
 import type { CirclesScreen, ConversationItem } from '../../types/circles';
+import type { Profile } from '../../types/database';
 
 // ─── Framer Motion transition variants ───────────────────────────────────────
 // Ease curves: [0.32, 0, 0.67, 0] = ease-in-cubic (fast exit)
@@ -49,17 +53,70 @@ const chatVariants = {
  */
 export function CirclesPage() {
   const [screen, setScreen] = useState<CirclesScreen>({ view: 'list' });
-  // Single hook instance — one WebSocket subscription shared by both views
-  const { conversations, loading, error, markAsRead } = useConversations();
+  const { conversations, loading, error, markAsRead, refetch } = useConversations();
+  const { user } = useAuth();
   const location = useLocation();
+  const { setHideNav } = useNavVisibility();
 
   const openChat = useCallback((item: ConversationItem) => {
     setScreen({ view: 'chat', item });
-  }, []);
+    setHideNav(true);
+  }, [setHideNav]);
 
   const goBack = useCallback(() => {
     setScreen({ view: 'list' });
-  }, []);
+    setHideNav(false);
+  }, [setHideNav]);
+
+  const handleNewChat = useCallback(async (contactId: string, contactProfile: Profile) => {
+    if (!user) return;
+
+    // If a direct conversation already exists in the list, open it immediately
+    const existing = conversations.find(
+      (c) =>
+        c.conversation.type === 'direct' &&
+        c.otherParticipants[0]?.profile?.id === contactId
+    );
+    if (existing) {
+      openChat(existing);
+      return;
+    }
+
+    // Otherwise, get or create a new direct conversation
+    const { conversationId, error: createErr } = await getOrCreateDirectConversation(
+      user.id,
+      contactId
+    );
+    if (!conversationId || createErr) return;
+
+    // Refetch conversations so the new one appears, then open it
+    await refetch();
+    // After refetch the state will update; use a short delay to let state settle
+    setTimeout(() => {
+      setScreen((prev) => {
+        if (prev.view === 'chat') return prev; // already navigated elsewhere
+        // Will be resolved by the useEffect below once conversations updates
+        return prev;
+      });
+      // Trigger open by storing the target id
+      setPendingOpenId(conversationId);
+    }, 100);
+  }, [user, conversations, openChat, refetch]);
+
+  const [pendingOpenId, setPendingOpenId] = useState<string | null>(null);
+
+  // Open pending conversation once conversations list updates
+  useEffect(() => {
+    if (!pendingOpenId) return;
+    const item = conversations.find((c) => c.conversation.id === pendingOpenId);
+    if (item) {
+      setPendingOpenId(null);
+      openChat(item);
+    }
+  }, [pendingOpenId, conversations, openChat]);
+
+  // Restore nav when unmounting
+  useEffect(() => () => { setHideNav(false); }, [setHideNav]);
 
   // Auto-open a conversation when navigated from invite acceptance
   useEffect(() => {
@@ -103,6 +160,7 @@ export function CirclesPage() {
               loading={loading}
               error={error}
               onOpenChat={openChat}
+              onNewChat={handleNewChat}
             />
           </motion.div>
         )}

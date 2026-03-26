@@ -5,8 +5,7 @@ import {
   ChevronLeft, ChevronRight, Mail, Trash2, Trophy, X,
 } from 'lucide-react';
 import {
-  format, addDays, startOfDay, isSameDay, isToday as isDateToday,
-  startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, addMonths,
+  format, addDays, addWeeks, startOfDay, startOfWeek, isSameDay, isToday as isDateToday,
 } from 'date-fns';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
@@ -56,7 +55,7 @@ export function SchedulePage() {
   const [loadingInvites, setLoadingInvites] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [monthOffset, setMonthOffset] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerModalOpen, setPlayerModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -321,19 +320,19 @@ export function SchedulePage() {
     })
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // ── Month calendar ────────────────────────────────────────────────────────
-  const currentMonth = useMemo(
-    () => addMonths(startOfDay(new Date()), monthOffset),
-    [monthOffset],
+  // ── 2-week calendar grid (Sun-aligned) ────────────────────────────────────
+  const periodStart = useMemo(() => {
+    const today = startOfDay(new Date());
+    const thisSunday = startOfWeek(today, { weekStartsOn: 0 });
+    return addWeeks(thisSunday, weekOffset * 2);
+  }, [weekOffset]);
+
+  const twoWeekDays = useMemo(
+    () => Array.from({ length: 14 }, (_, i) => addDays(periodStart, i)),
+    [periodStart],
   );
-  const calDays = useMemo(() => {
-    const ms = startOfMonth(currentMonth);
-    const me = endOfMonth(currentMonth);
-    return eachDayOfInterval({
-      start: startOfWeek(ms, { weekStartsOn: 1 }),
-      end: endOfWeek(me, { weekStartsOn: 1 }),
-    });
-  }, [currentMonth]);
+
+  const rangeLabel = `${format(twoWeekDays[0], 'MMM d')} – ${format(twoWeekDays[13], 'MMM d, yyyy')}`;
 
   const selectedDaySchedule = useMemo(
     () => filteredSchedule.filter((item) => isSameDay(item.date, selectedDate)),
@@ -344,13 +343,6 @@ export function SchedulePage() {
   const hasEventOnDay = (day: Date) =>
     filteredSchedule.some((item) => isSameDay(item.date, day));
 
-  // ── Icon button style ─────────────────────────────────────────────────────
-  const navBtn: React.CSSProperties = {
-    width: 32, height: 32, borderRadius: '50%',
-    background: 'var(--color-surf-2)', border: 'none',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', color: 'var(--color-t1)', flexShrink: 0,
-  };
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg)', paddingBottom: 148 }}>
@@ -387,48 +379,48 @@ export function SchedulePage() {
         </button>
       </div>
 
-      {/* ── Month Calendar ─────────────────────────────────────────────────── */}
+      {/* ── 2-Week Calendar Grid ───────────────────────────────────────────── */}
       <div style={{ padding: '0 var(--space-5) var(--space-4)' }}>
         <div style={{
           background: 'var(--color-surf)', borderRadius: 'var(--radius-xl)',
-          padding: 'var(--space-4)', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+          padding: '16px', boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
         }}>
-          {/* Month nav */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
-            <button style={navBtn} onClick={() => setMonthOffset((m) => m - 1)} aria-label="Previous month">
-              <ChevronLeft size={16} />
+          {/* Header: prev / range label / next */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <button
+              onClick={() => setWeekOffset((o) => o - 1)}
+              aria-label="Previous 2 weeks"
+              style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--color-bdr)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-t2)', flexShrink: 0 }}
+            >
+              <ChevronLeft size={15} />
             </button>
-            <span style={{
-              fontFamily: 'var(--font-display)', fontWeight: 700,
-              fontSize: 'var(--text-base)', color: 'var(--color-t1)',
-            }}>
-              {format(currentMonth, 'MMMM yyyy')}
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--color-t1)' }}>
+              {rangeLabel}
             </span>
-            <button style={navBtn} onClick={() => setMonthOffset((m) => m + 1)} aria-label="Next month">
-              <ChevronRight size={16} />
+            <button
+              onClick={() => setWeekOffset((o) => o + 1)}
+              aria-label="Next 2 weeks"
+              style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--color-bdr)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-t2)', flexShrink: 0 }}
+            >
+              <ChevronRight size={15} />
             </button>
           </div>
 
           {/* Weekday headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 6 }}>
-            {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((d) => (
-              <div key={d} style={{
-                textAlign: 'center', fontFamily: 'var(--font-body)',
-                fontSize: 9, fontWeight: 700, color: 'var(--color-t3)',
-                letterSpacing: '0.06em', paddingBottom: 4,
-              }}>
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+              <div key={i} style={{ textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 600, color: 'var(--color-t3)', letterSpacing: '0.04em' }}>
                 {d}
               </div>
             ))}
           </div>
 
-          {/* Day cells */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-            {calDays.map((day) => {
+          {/* Day grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+            {twoWeekDays.map((day) => {
               const isSelected = isSameDay(day, selectedDate);
               const hasEvent = hasEventOnDay(day);
               const isToday = isDateToday(day);
-              const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
 
               return (
                 <button
@@ -444,24 +436,17 @@ export function SchedulePage() {
                   }}
                 >
                   <span style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: 'var(--text-sm)',
+                    fontFamily: 'var(--font-body)', fontSize: 14,
                     fontWeight: isToday || isSelected ? 700 : 400,
-                    color: isSelected
-                      ? '#fff'
-                      : isToday
-                        ? 'var(--color-acc)'
-                        : isCurrentMonth
-                          ? 'var(--color-t1)'
-                          : 'var(--color-t3)',
+                    color: isSelected ? '#fff' : isToday ? 'var(--color-acc)' : 'var(--color-t1)',
                     lineHeight: 1,
                   }}>
                     {format(day, 'd')}
                   </span>
-                  {hasEvent && !isSelected && (
+                  {hasEvent && (
                     <div style={{
                       width: 4, height: 4, borderRadius: '50%',
-                      background: 'var(--color-acc)',
+                      background: isSelected ? '#fff' : 'var(--color-acc)',
                       position: 'absolute', bottom: 4,
                     }} />
                   )}

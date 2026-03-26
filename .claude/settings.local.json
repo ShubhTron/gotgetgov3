@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s http://localhost:5174/schedule)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":5174\")",
+      "Bash(taskkill /PID 25328 /F)",
+      "Bash(taskkill //PID 25328 //F)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174)",
+      "Bash(npx shadcn@latest add slider --yes)",
+      "Bash(npm install:*)",
+      "Bash(find 'C:\\\\Users\\\\RAJESH CHAMOLI\\\\Desktop\\\\Gotgetgov3' -type f -name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js)"
+    ]
+  }
+}

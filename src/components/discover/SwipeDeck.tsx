@@ -8,7 +8,7 @@ interface SwipeDeckProps {
   players: DiscoverPlayer[];
   onSwipeRight: (id: string) => void;
   onSwipeLeft: (id: string) => void;
-  undoId?: string | null;   // when set, re-adds this player to top
+  undoId?: string | null;
   triggerSwipe?: { id: string; direction: 'left' | 'right' } | null;
 }
 
@@ -21,12 +21,13 @@ const SWIPE_THRESHOLD = 0.4;
 const VELOCITY_THRESHOLD = 300;
 
 function DraggableCard({
-  player, onSwipeRight, onSwipeLeft, isBack,
+  player, onSwipeRight, onSwipeLeft, isBack, forceSwipe,
 }: {
   player: DiscoverPlayer;
   onSwipeRight: (id: string) => void;
   onSwipeLeft:  (id: string) => void;
   isBack: boolean;
+  forceSwipe?: { id: string; direction: 'left' | 'right' } | null;
 }) {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const x = useMotionValue(0);
@@ -35,6 +36,18 @@ function DraggableCard({
   const threshold = window.innerWidth * 0.4;
   const connectOpacity = useTransform(x, [0, threshold], [0, 1]);
   const passOpacity    = useTransform(x, [-threshold, 0], [1, 0]);
+
+  // Programmatic swipe animation triggered by buttons
+  useEffect(() => {
+    if (!forceSwipe || forceSwipe.id !== player.id) return;
+    const screenW = window.innerWidth;
+    const targetX = forceSwipe.direction === 'right' ? screenW * 1.5 : -screenW * 1.5;
+    animate(x, targetX, { duration: 0.32, ease: [0.32, 0, 0.67, 0] }).then(() => {
+      if (forceSwipe.direction === 'right') onSwipeRight(player.id);
+      else onSwipeLeft(player.id);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceSwipe]);
 
   const handleDragEnd = useCallback((_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
     const screenW = window.innerWidth;
@@ -112,6 +125,7 @@ function DraggableCard({
 
 export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerSwipe }: SwipeDeckProps) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [programSwipe, setProgramSwipe] = useState<{ id: string; direction: 'left' | 'right' } | null>(null);
 
   // Undo: remove from dismissed when undoId changes
   useEffect(() => {
@@ -124,20 +138,22 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerS
     }
   }, [undoId]);
 
-  // Handle programmatic swipes from buttons
+  // Handle programmatic swipes from buttons — trigger animated fly-out
   useEffect(() => {
     if (triggerSwipe) {
-      setDismissed(prev => new Set([...prev, triggerSwipe.id]));
+      setProgramSwipe({ ...triggerSwipe });
     }
   }, [triggerSwipe]);
 
   const handleSwipeRight = useCallback((id: string) => {
     setDismissed(prev => new Set([...prev, id]));
+    setProgramSwipe(null);
     onSwipeRight(id);
   }, [onSwipeRight]);
 
   const handleSwipeLeft = useCallback((id: string) => {
     setDismissed(prev => new Set([...prev, id]));
+    setProgramSwipe(null);
     onSwipeLeft(id);
   }, [onSwipeLeft]);
 
@@ -199,6 +215,7 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerS
         onSwipeRight={handleSwipeRight}
         onSwipeLeft={handleSwipeLeft}
         isBack={false}
+        forceSwipe={programSwipe?.id === front.id ? programSwipe : null}
       />
     </div>
   );

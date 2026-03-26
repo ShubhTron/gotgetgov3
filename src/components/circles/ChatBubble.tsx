@@ -1,8 +1,9 @@
 import React from 'react';
 import { Avatar, IconCheckCheck } from '../../design-system';
 import { SportCard } from './SportCard';
-import type { MessageWithSender, SportCardPayload } from '../../types/circles';
-import { SPORT_CARD_PREFIX } from '../../types/circles';
+import { MatchProposalCard } from './MatchProposalCard';
+import type { MessageWithSender, SportCardPayload, MatchProposalPayload } from '../../types/circles';
+import { SPORT_CARD_PREFIX, MATCH_PROPOSAL_PREFIX } from '../../types/circles';
 import type { Profile } from '../../types/database';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -24,6 +25,16 @@ function parseSportCard(content: string): SportCardPayload | null {
   }
 }
 
+/** Parses a match proposal payload from a message content string */
+function parseMatchProposal(content: string): MatchProposalPayload | null {
+  if (!content.startsWith(MATCH_PROPOSAL_PREFIX)) return null;
+  try {
+    return JSON.parse(content.slice(MATCH_PROPOSAL_PREFIX.length)) as MatchProposalPayload;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ChatBubbleProps {
@@ -32,6 +43,10 @@ interface ChatBubbleProps {
   showAvatar: boolean;
   /** Pre-fetched profiles for sport card participants */
   participantProfiles?: Profile[];
+  /** Handlers for match proposal actions (received proposals only) */
+  onAcceptProposal?: (messageId: string) => void;
+  onAltProposal?: (messageId: string) => void;
+  onDeclineProposal?: (messageId: string) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -46,8 +61,9 @@ interface ChatBubbleProps {
  * - Received: bottom-left corner flattened (points toward sender avatar)
  * - Sent: bottom-right corner flattened (visual tail)
  */
-export function ChatBubble({ msg, showAvatar, participantProfiles = [] }: ChatBubbleProps) {
+export function ChatBubble({ msg, showAvatar, participantProfiles = [], onAcceptProposal, onAltProposal, onDeclineProposal }: ChatBubbleProps) {
   const sportCard = parseSportCard(msg.message.content);
+  const proposal = !sportCard ? parseMatchProposal(msg.message.content) : null;
   const isTemp = msg.message.id.startsWith('temp-');
 
   if (msg.isMine) {
@@ -69,6 +85,8 @@ export function ChatBubble({ msg, showAvatar, participantProfiles = [] }: ChatBu
             description={sportCard.description}
             participants={participantProfiles}
           />
+        ) : proposal ? (
+          <MatchProposalCard payload={proposal} isMine={true} />
         ) : (
           <div
             style={{
@@ -155,6 +173,14 @@ export function ChatBubble({ msg, showAvatar, participantProfiles = [] }: ChatBu
             title={sportCard.title}
             description={sportCard.description}
             participants={participantProfiles}
+          />
+        ) : proposal ? (
+          <MatchProposalCard
+            payload={proposal}
+            isMine={false}
+            onAccept={() => onAcceptProposal?.(msg.message.id)}
+            onAlt={() => onAltProposal?.(msg.message.id)}
+            onDecline={() => onDeclineProposal?.(msg.message.id)}
           />
         ) : (
           <div

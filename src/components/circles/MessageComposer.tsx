@@ -1,6 +1,6 @@
 import React, { useState, useRef, type KeyboardEvent } from 'react';
+import { CalendarPlus } from 'lucide-react';
 import {
-  IconPlus,
   IconSmile,
   IconPaperclip,
   IconArrowRight,
@@ -13,6 +13,8 @@ interface MessageComposerProps {
   sending: boolean;
   /** Optional error text shown briefly above the composer */
   sendError?: string | null;
+  /** Opens the suggest time sheet */
+  onSuggestTime?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -24,7 +26,7 @@ interface MessageComposerProps {
  * - Send button disabled when input is empty or sending is in progress
  * - Icon buttons (+, emoji, clip) are stubs for future functionality
  */
-export function MessageComposer({ onSend, sending, sendError }: MessageComposerProps) {
+export function MessageComposer({ onSend, sending, sendError, onSuggestTime }: MessageComposerProps) {
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -78,9 +80,9 @@ export function MessageComposer({ onSend, sending, sendError }: MessageComposerP
           gap: 8,
         }}
       >
-        {/* + button (stub) */}
-        <IconButton aria-label="Attach media" disabled={sending}>
-          <IconPlus size={20} />
+        {/* Suggest time button */}
+        <IconButton aria-label="Suggest a time" disabled={sending} onClick={onSuggestTime}>
+          <CalendarPlus size={18} />
         </IconButton>
 
         {/* Emoji button (stub) */}
@@ -171,16 +173,19 @@ export function MessageComposer({ onSend, sending, sendError }: MessageComposerP
 function IconButton({
   children,
   disabled,
+  onClick,
   'aria-label': ariaLabel,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
+  onClick?: () => void;
   'aria-label'?: string;
 }) {
   return (
     <button
       aria-label={ariaLabel}
       disabled={disabled}
+      onClick={onClick}
       style={{
         width: 36,
         height: 36,

@@ -98,3 +98,8 @@
 /* ─── Hide scrollbar utility ─────────────────────────────────────────────── */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+
+/* ─── Filter modal range sliders ─────────────────────────────────────────── */
+.filter-range::-webkit-slider-thumb { background: var(--color-acc); }
+.filter-range::-moz-range-thumb     { background: var(--color-acc); }

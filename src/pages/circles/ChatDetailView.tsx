@@ -1,12 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Avatar,
   IconArrowLeft,
 } from '../../design-system';
 import { ChatBubble } from '../../components/circles/ChatBubble';
 import { MessageComposer } from '../../components/circles/MessageComposer';
+import { ScheduleOverlapBar } from '../../components/circles/ScheduleOverlapBar';
+import { SuggestTimeSheet } from '../../components/circles/SuggestTimeSheet';
 import { useMessages } from '../../hooks/useMessages';
-import type { ConversationItem, MessageWithSender } from '../../types/circles';
+import { useAuth } from '../../contexts/AuthContext';
+import type { ConversationItem, MessageWithSender, MatchProposalPayload } from '../../types/circles';
+import { MATCH_PROPOSAL_PREFIX } from '../../types/circles';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -75,9 +79,12 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
   const { messages, loading, error, sendMessage, sending } = useMessages(
     conversationItem.conversation.id
   );
+  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
 
   const otherProfile = conversationItem.otherParticipants[0]?.profile ?? null;
+  const otherUserId = otherProfile?.id ?? '';
   const online = otherProfile ? isOnlineNow(otherProfile.last_seen) : false;
 
   // Mark messages as read when entering the chat
@@ -101,6 +108,28 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
       markAsRead(conversationItem.conversation.id);
     }
   }, [messages.length, conversationItem.conversation.id, markAsRead]);
+
+  // ── Proposal handlers ────────────────────────────────────────────────────
+  function handleSendProposal(payload: Omit<MatchProposalPayload, 'status' | 'proposedBy'>) {
+    const full: MatchProposalPayload = {
+      ...payload,
+      status: 'pending',
+      proposedBy: user?.id ?? '',
+    };
+    sendMessage(MATCH_PROPOSAL_PREFIX + JSON.stringify(full));
+  }
+
+  function handleAcceptProposal(_messageId: string) {
+    sendMessage('✅ Accepted the match proposal!');
+  }
+
+  function handleAltProposal(_messageId: string) {
+    setSuggestOpen(true);
+  }
+
+  function handleDeclineProposal(_messageId: string) {
+    sendMessage("Thanks, but that time doesn't work for me.");
+  }
 
   return (
     <div
@@ -203,6 +232,15 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
 
       </div>
 
+      {/* ── Schedule Overlap Bar ─────────────────────────────────────────── */}
+      {user?.id && otherUserId && (
+        <ScheduleOverlapBar
+          myUserId={user.id}
+          otherUserId={otherUserId}
+          otherName={conversationItem.displayName}
+        />
+      )}
+
       {/* ── Message scroll area ──────────────────────────────────────────── */}
       <div
         ref={scrollRef}
@@ -246,7 +284,7 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
           </div>
         )}
 
-        {renderMessages(messages)}
+        {renderMessages(messages, handleAcceptProposal, handleAltProposal, handleDeclineProposal)}
       </div>
 
       {/* ── Composer ─────────────────────────────────────────────────────── */}
@@ -254,6 +292,15 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
         onSend={sendMessage}
         sending={sending}
         sendError={error}
+        onSuggestTime={() => setSuggestOpen(true)}
+      />
+
+      {/* ── Suggest Time Sheet ───────────────────────────────────────────── */}
+      <SuggestTimeSheet
+        open={suggestOpen}
+        onClose={() => setSuggestOpen(false)}
+        onPropose={handleSendProposal}
+        myUserId={user?.id ?? ''}
       />
     </div>
   );
@@ -261,7 +308,12 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
 
 // ─── Message list renderer with day separators ────────────────────────────────
 
-function renderMessages(messages: MessageWithSender[]) {
+function renderMessages(
+  messages: MessageWithSender[],
+  onAcceptProposal: (id: string) => void,
+  onAltProposal: (id: string) => void,
+  onDeclineProposal: (id: string) => void,
+) {
   const nodes: React.ReactNode[] = [];
 
   messages.forEach((msg, i) => {
@@ -283,7 +335,14 @@ function renderMessages(messages: MessageWithSender[]) {
     const showAvatar = !msg.isMine && !prevIsSame;
 
     nodes.push(
-      <ChatBubble key={msg.message.id} msg={msg} showAvatar={showAvatar} />
+      <ChatBubble
+        key={msg.message.id}
+        msg={msg}
+        showAvatar={showAvatar}
+        onAcceptProposal={onAcceptProposal}
+        onAltProposal={onAltProposal}
+        onDeclineProposal={onDeclineProposal}
+      />
     );
   });
 

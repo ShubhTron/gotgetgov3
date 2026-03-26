@@ -97,7 +97,10 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
 
 function PillRow({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+    <div
+      className="hide-scrollbar"
+      style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'scroll', WebkitOverflowScrolling: 'touch' as never, touchAction: 'pan-x', paddingBottom: 4 }}
+    >
       {children}
     </div>
   );
@@ -155,7 +158,7 @@ export function SearchModal({ isOpen, onClose, onFilterChange, userSports = [] }
       case 'discover':
         return (
           <>
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 20 }}>
               <FilterLabel>Sport</FilterLabel>
               <PillRow>
                 <Pill label="All" active={sportFilter === 'all'} onClick={() => setSportFilter('all')} />
@@ -195,20 +198,22 @@ export function SearchModal({ isOpen, onClose, onFilterChange, userSports = [] }
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Full-screen dimmed backdrop */}
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            style={{ position: 'fixed', top: 'calc(max(8px, env(safe-area-inset-top, 8px)) + 60px)', left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 999 }}
             onClick={onClose}
           />
 
+          {/* Search panel — slides down from below header */}
           <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: [0.0, 0.0, 0.2, 1] }}
-            style={{ position: 'fixed', top: 'calc(max(8px, env(safe-area-inset-top, 8px)) + 60px)', left: 0, right: 0, zIndex: 51, background: 'var(--color-surf)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderBottom: '1px solid var(--color-bdr)', maxHeight: 'calc(85dvh - 68px)', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.4)', borderRadius: '0 0 16px 16px' }}
-            className="md:left-1/2 md:-translate-x-1/2 md:max-w-lg md:rounded-[14px]"
+            className="fixed inset-0 z-[1000] overflow-y-auto md:inset-auto md:top-[80px] md:left-1/2 md:-translate-x-1/2 md:max-w-lg md:rounded-[14px] md:max-h-[calc(100dvh-100px)] md:border md:border-[var(--color-bdr)]"
+            style={{ background: 'var(--color-surf)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}
           >
-            <div style={{ padding: 16, borderBottom: '1px solid var(--color-bdr)' }}>
+            <div style={{ padding: '0 16px 16px', paddingTop: 'max(20px, env(safe-area-inset-top, 20px))', borderBottom: '1px solid var(--color-bdr)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--color-surf-2)', border: '1px solid var(--color-bdr)', borderRadius: 12, padding: '0 14px', height: 44 }}>
                   <Search size={16} style={{ color: 'var(--color-acc)', flexShrink: 0 }} />
@@ -231,16 +236,13 @@ export function SearchModal({ isOpen, onClose, onFilterChange, userSports = [] }
               </div>
 
               {pageContext !== 'other' && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-bdr)' }}>
-                  <p style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-t3)', margin: '0 0 12px 0' }}>
-                    {pageContext.charAt(0).toUpperCase() + pageContext.slice(1)} Filters
-                  </p>
+                <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--color-bdr)' }}>
                   {renderContextFilters()}
                 </div>
               )}
             </div>
 
-            <div style={{ padding: 16, overflowY: 'auto', maxHeight: '40dvh' }}>
+            <div style={{ padding: '20px 16px', paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))' }}>
               {query.length > 0 && (uuidLoading || uuidResult) && (
                 <div style={{ marginBottom: 16 }}>
                   <FilterLabel>User</FilterLabel>
@@ -298,7 +300,7 @@ export function SearchModal({ isOpen, onClose, onFilterChange, userSports = [] }
 
           {/* PlayerProfileModal is a placeholder that will be filled in Phase 5 */}
           {selectedProfile && (
-            <div onClick={() => setSelectedProfile(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }}>
+            <div onClick={() => setSelectedProfile(null)} style={{ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }}>
               <div style={{ background: 'var(--color-surf)', borderRadius: 16, padding: 24, maxWidth: 360, width: '90%' }}>
                 <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-t1)', fontWeight: 600, marginBottom: 4 }}>{selectedProfile.full_name}</p>
                 <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-t2)', fontSize: 13 }}>Profile details coming in Phase 5</p>

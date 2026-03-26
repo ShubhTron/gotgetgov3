@@ -625,7 +625,7 @@ export function OnboardingPage() {
       }
       await updateProfile({ full_name: data.fullName, avatar_url: avatarUrl || null, location_city: data.locationCity || null, location_country: null, location_lat: data.locationLat, location_lng: data.locationLng, bio: data.bio, onboarding_completed: true });
       for (const sport of data.selectedSports) {
-        await supabase.from('user_sport_profiles').upsert({ user_id: user!.id, sport, self_assessed_level: skillValueToString(data.sportLevels[sport] ?? 0) });
+        await supabase.from('user_sport_profiles').upsert({ user_id: user!.id, sport, self_assessed_level: skillValueToString(data.sportLevels[sport] ?? 1) });
       }
       for (const entry of data.availability) {
         for (const range of entry.ranges) {
