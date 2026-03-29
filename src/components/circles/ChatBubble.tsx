@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { FileText, Download } from 'lucide-react';
 import { Avatar, IconCheckCheck } from '../../design-system';
 import { SportCard } from './SportCard';
 import { MatchProposalCard } from './MatchProposalCard';
-import type { MessageWithSender, SportCardPayload, MatchProposalPayload } from '../../types/circles';
-import { SPORT_CARD_PREFIX, MATCH_PROPOSAL_PREFIX } from '../../types/circles';
+import type { MessageWithSender, SportCardPayload, MatchProposalPayload, AttachmentPayload } from '../../types/circles';
+import { SPORT_CARD_PREFIX, MATCH_PROPOSAL_PREFIX, ATTACHMENT_PREFIX } from '../../types/circles';
+import { formatFileSize } from '../../lib/attachments';
 import type { Profile } from '../../types/database';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -30,6 +32,16 @@ function parseMatchProposal(content: string): MatchProposalPayload | null {
   if (!content.startsWith(MATCH_PROPOSAL_PREFIX)) return null;
   try {
     return JSON.parse(content.slice(MATCH_PROPOSAL_PREFIX.length)) as MatchProposalPayload;
+  } catch {
+    return null;
+  }
+}
+
+/** Parses an attachment payload from a message content string */
+function parseAttachment(content: string): AttachmentPayload | null {
+  if (!content.startsWith(ATTACHMENT_PREFIX)) return null;
+  try {
+    return JSON.parse(content.slice(ATTACHMENT_PREFIX.length)) as AttachmentPayload;
   } catch {
     return null;
   }
@@ -62,8 +74,9 @@ interface ChatBubbleProps {
  * - Sent: bottom-right corner flattened (visual tail)
  */
 export function ChatBubble({ msg, showAvatar, participantProfiles = [], onAcceptProposal, onAltProposal, onDeclineProposal }: ChatBubbleProps) {
-  const sportCard = parseSportCard(msg.message.content);
-  const proposal = !sportCard ? parseMatchProposal(msg.message.content) : null;
+  const attachment = parseAttachment(msg.message.content);
+  const sportCard = !attachment ? parseSportCard(msg.message.content) : null;
+  const proposal = !attachment && !sportCard ? parseMatchProposal(msg.message.content) : null;
   const isTemp = msg.message.id.startsWith('temp-');
 
   if (msg.isMine) {
@@ -77,7 +90,9 @@ export function ChatBubble({ msg, showAvatar, participantProfiles = [], onAccept
           paddingLeft: 48, // keep sent bubbles from stretching full width
         }}
       >
-        {sportCard ? (
+        {attachment ? (
+          <AttachmentBubble payload={attachment} isMine={true} isTemp={isTemp} />
+        ) : sportCard ? (
           <SportCard
             goal={sportCard.goal}
             sport={sportCard.sport}
@@ -166,7 +181,9 @@ export function ChatBubble({ msg, showAvatar, participantProfiles = [], onAccept
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-        {sportCard ? (
+        {attachment ? (
+          <AttachmentBubble payload={attachment} isMine={false} isTemp={isTemp} />
+        ) : sportCard ? (
           <SportCard
             goal={sportCard.goal}
             sport={sportCard.sport}
@@ -219,6 +236,210 @@ export function ChatBubble({ msg, showAvatar, participantProfiles = [], onAccept
           {formatTime(msg.message.created_at)}
         </span>
       </div>
+    </div>
+  );
+}
+
+// ─── Attachment bubble ────────────────────────────────────────────────────────
+
+function AttachmentBubble({
+  payload,
+  isMine,
+  isTemp,
+}: {
+  payload: AttachmentPayload;
+  isMine: boolean;
+  isTemp: boolean;
+}) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const bubbleBg    = isMine ? 'var(--color-acc)' : 'var(--color-surf-2)';
+  const textColor   = isMine ? '#fff' : 'var(--color-t1)';
+  const subColor    = isMine ? 'rgba(255,255,255,0.65)' : 'var(--color-t3)';
+  const borderRadius = isMine
+    ? 'var(--radius-2xl) var(--radius-2xl) var(--radius-sm) var(--radius-2xl)'
+    : 'var(--radius-2xl) var(--radius-2xl) var(--radius-2xl) var(--radius-sm)';
+
+  return (
+    <>
+      <div style={{
+        maxWidth: 240,
+        opacity: isTemp ? 0.7 : 1,
+        borderRadius,
+        overflow: 'hidden',
+        background: bubbleBg,
+      }}>
+        {/* ── Image ── */}
+        {payload.type === 'image' && (
+          <img
+            src={payload.url}
+            alt={payload.name}
+            onClick={() => setLightboxOpen(true)}
+            style={{
+              display: 'block',
+              width: '100%',
+              maxHeight: 220,
+              objectFit: 'cover',
+              cursor: 'pointer',
+            }}
+          />
+        )}
+
+        {/* ── Video ── */}
+        {payload.type === 'video' && (
+          <video
+            src={payload.url}
+            controls
+            preload="metadata"
+            style={{
+              display: 'block',
+              width: '100%',
+              maxHeight: 220,
+              background: '#000',
+            }}
+          />
+        )}
+
+        {/* ── Audio ── */}
+        {payload.type === 'audio' && (
+          <div style={{ padding: '12px 14px 10px' }}>
+            <p style={{
+              margin: '0 0 6px',
+              fontFamily: 'var(--font-body)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 600,
+              color: textColor,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {payload.name}
+            </p>
+            <audio
+              src={payload.url}
+              controls
+              style={{ width: '100%', height: 36 }}
+            />
+          </div>
+        )}
+
+        {/* ── Document ── */}
+        {payload.type === 'document' && (
+          <a
+            href={payload.url}
+            download={payload.name}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '14px 16px',
+              textDecoration: 'none',
+            }}
+          >
+            <div style={{
+              width: 40, height: 40,
+              borderRadius: 10,
+              background: isMine ? 'rgba(255,255,255,0.18)' : 'var(--color-surf)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <FileText size={20} color={textColor} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                margin: 0,
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: textColor,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {payload.name}
+              </p>
+              <p style={{
+                margin: 0,
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--text-xs)',
+                color: subColor,
+                marginTop: 2,
+              }}>
+                {formatFileSize(payload.size)}
+              </p>
+            </div>
+            <Download size={16} color={subColor} style={{ flexShrink: 0 }} />
+          </a>
+        )}
+
+        {/* ── Caption (optional text alongside the attachment) ── */}
+        {payload.caption && (
+          <div style={{ padding: '8px 14px 12px' }}>
+            <p style={{
+              margin: 0,
+              fontFamily: 'var(--font-body)',
+              fontSize: 'var(--text-sm)',
+              color: textColor,
+              lineHeight: 1.45,
+              wordBreak: 'break-word',
+            }}>
+              {payload.caption}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Image lightbox ── */}
+      {lightboxOpen && payload.type === 'image' && (
+        <ImageLightbox
+          src={payload.url}
+          alt={payload.name}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Image lightbox ───────────────────────────────────────────────────────────
+
+function ImageLightbox({
+  src,
+  alt,
+  onClose,
+}: {
+  src: string;
+  alt: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.92)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        style={{
+          maxWidth: '100%',
+          maxHeight: '100%',
+          borderRadius: 12,
+          objectFit: 'contain',
+          userSelect: 'none',
+          pointerEvents: 'none',
+        }}
+      />
     </div>
   );
 }

@@ -403,17 +403,7 @@ function WelcomeScreen({ onNavigate, onContinueAsGuest }: {
     }}>
       {/* Hero */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 48,
-          fontWeight: 400,
-          color: '#FFFFFF',
-          letterSpacing: '-0.025em',
-          lineHeight: 1,
-          marginBottom: 28,
-        }}>
-          Got<em style={{ fontStyle: 'italic', color: ACCENT }}>Get</em>Go
-        </div>
+        <img src="/logo.png" alt="GotGetGo" style={{ height: 60, width: 'auto', marginBottom: 28 }} />
         <h1 style={{
           fontFamily: 'var(--font-display)',
           fontSize: 'var(--text-3xl)',

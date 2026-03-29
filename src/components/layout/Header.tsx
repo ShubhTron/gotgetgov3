@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Bell, Trophy, LogIn, User, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
 import { NotificationBadge } from '../ui/NotificationBadge';
 import { getInitials } from '@/lib/avatar-utils';
 
@@ -14,9 +15,22 @@ interface HeaderProps {
 export function Header({ onSearchClick, notificationCount = 0 }: HeaderProps) {
   const navigate = useNavigate();
   const { user, profile, isGuest, signOut } = useAuth();
+  const { tutorialStep, registerTarget } = useGuestTutorial();
   const avatarInitials = getInitials(profile?.full_name ?? 'Me');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (tutorialStep === 'go_to_notifications') {
+      registerTarget('go_to_notifications', bellRef.current);
+    }
+    return () => {
+      if (tutorialStep === 'go_to_notifications') {
+        registerTarget('go_to_notifications', null);
+      }
+    };
+  }, [tutorialStep, registerTarget]);
 
   // Close on outside click
   useEffect(() => {
@@ -59,13 +73,7 @@ export function Header({ onSearchClick, notificationCount = 0 }: HeaderProps) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           aria-label="Home"
         >
-          <span style={{
-            fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400,
-            color: 'var(--color-t1)', letterSpacing: '-0.025em', lineHeight: 1,
-            userSelect: 'none',
-          }}>
-            Got<em style={{ fontStyle: 'italic', color: 'var(--color-acc)' }}>Get</em>Go
-          </span>
+          <img src="/logo.png" alt="GotGetGo" style={{ height: 32, width: 'auto', display: 'block' }} />
         </button>
 
         {/* Right actions */}
@@ -78,7 +86,7 @@ export function Header({ onSearchClick, notificationCount = 0 }: HeaderProps) {
             <Trophy size={20} strokeWidth={2} />
           </button>
 
-          <button style={{ ...iconBtn, position: 'relative' }} onClick={() => navigate('/notifications')} aria-label="Notifications">
+          <button ref={bellRef} style={{ ...iconBtn, position: 'relative' }} onClick={() => navigate('/notifications')} aria-label="Notifications">
             <Bell size={20} strokeWidth={2} />
             <NotificationBadge count={notificationCount} />
           </button>

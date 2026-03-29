@@ -161,9 +161,7 @@ function AppShellContent({ children }: AppShellProps) {
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--color-t1)', letterSpacing: '-0.01em' }}>
-                GotGetGo
-              </span>
+              <img src="/logo.png" alt="GotGetGo" style={{ height: 28, width: 'auto', display: 'block' }} />
             </button>
             <DesktopNav unreadMessages={unreadMessages} />
           </div>
@@ -267,14 +265,16 @@ function AppShellContent({ children }: AppShellProps) {
         </div>
       </div>
 
-      {/* Mobile header */}
-      <div className="lg:hidden shrink-0 z-[110] relative">
-        <Header
-          onSearchClick={() => setIsSearchOpen(true)}
-          onCreateClick={() => setIsCreateMenuOpen(true)}
-          notificationCount={unreadNotifications}
-        />
-      </div>
+      {/* Mobile header — hidden when in conversation view */}
+      {!useNavVisibility().hideNav && (
+        <div className="lg:hidden shrink-0 z-[110] relative">
+          <Header
+            onSearchClick={() => setIsSearchOpen(true)}
+            onCreateClick={() => setIsCreateMenuOpen(true)}
+            notificationCount={unreadNotifications}
+          />
+        </div>
+      )}
 
       {/* Main content */}
       <main

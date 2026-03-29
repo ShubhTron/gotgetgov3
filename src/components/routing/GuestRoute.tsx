@@ -6,7 +6,7 @@ interface GuestRouteProps {
 }
 
 export function GuestRoute({ children }: GuestRouteProps) {
-  const { user, loading, isGuest } = useAuth();
+  const { user, loading, isGuest, profile } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +18,11 @@ export function GuestRoute({ children }: GuestRouteProps) {
 
   if (!user && !isGuest) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // If authenticated user hasn't completed onboarding, redirect to onboarding
+  if (user && !profile?.onboarding_completed) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <>{children}</>;

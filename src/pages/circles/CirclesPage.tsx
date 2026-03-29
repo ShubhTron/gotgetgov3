@@ -5,8 +5,10 @@ import { CirclesListView } from './CirclesListView';
 import { ChatDetailView } from './ChatDetailView';
 import { useConversations } from '../../hooks/useConversations';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
 import { useNavVisibility } from '../../contexts/NavVisibilityContext';
 import { getOrCreateDirectConversation } from '../../lib/messaging';
+import { EMMA_CONVERSATION_ITEM } from '../../data/emmaDemoProfile';
 import type { CirclesScreen, ConversationItem } from '../../types/circles';
 import type { Profile } from '../../types/database';
 
@@ -54,7 +56,8 @@ const chatVariants = {
 export function CirclesPage() {
   const [screen, setScreen] = useState<CirclesScreen>({ view: 'list' });
   const { conversations, loading, error, markAsRead, refetch } = useConversations();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
+  const { tutorialStep, advanceTutorial } = useGuestTutorial();
   const location = useLocation();
   const { setHideNav } = useNavVisibility();
 
@@ -117,6 +120,24 @@ export function CirclesPage() {
 
   // Restore nav when unmounting
   useEffect(() => () => { setHideNav(false); }, [setHideNav]);
+
+  // Tutorial: advance to emma_greeting when page first mounts during go_to_messages step
+  useEffect(() => {
+    if (isGuest && tutorialStep === 'go_to_messages') {
+      advanceTutorial('emma_greeting');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tutorial: auto-open Emma's chat once Emma's greeting step is active
+  useEffect(() => {
+    if (!isGuest) return;
+    if ((tutorialStep === 'emma_greeting' || tutorialStep === 'send_message') && screen.view === 'list') {
+      const t = setTimeout(() => {
+        openChat(EMMA_CONVERSATION_ITEM);
+      }, 600);
+      return () => clearTimeout(t);
+    }
+  }, [tutorialStep, screen.view, isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-open a conversation when navigated from invite acceptance
   useEffect(() => {

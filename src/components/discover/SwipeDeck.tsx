@@ -10,6 +10,7 @@ interface SwipeDeckProps {
   onSwipeLeft: (id: string) => void;
   undoId?: string | null;
   triggerSwipe?: { id: string; direction: 'left' | 'right' } | null;
+  onReset?: () => void;
 }
 
 export interface SwipeDeckHandle {
@@ -123,7 +124,7 @@ function DraggableCard({
   );
 }
 
-export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerSwipe }: SwipeDeckProps) {
+export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerSwipe, onReset }: SwipeDeckProps) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [programSwipe, setProgramSwipe] = useState<{ id: string; direction: 'left' | 'right' } | null>(null);
 
@@ -180,12 +181,12 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerS
           Check back soon
         </div>
         <button
-          onClick={() => setDismissed(new Set())}
+          onClick={() => { setDismissed(new Set()); onReset?.(); }}
           style={{
             marginTop: 'var(--space-2)',
             fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
             fontWeight: 600, color: 'var(--color-acc-dk)',
-            background: 'none', border: 'none', cursor: 'pointer',
+            background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
             textDecoration: 'underline',
           }}
         >

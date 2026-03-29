@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Avatar,
   IconArrowLeft,
@@ -9,8 +11,12 @@ import { ScheduleOverlapBar } from '../../components/circles/ScheduleOverlapBar'
 import { SuggestTimeSheet } from '../../components/circles/SuggestTimeSheet';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuth } from '../../contexts/AuthContext';
-import type { ConversationItem, MessageWithSender, MatchProposalPayload } from '../../types/circles';
-import { MATCH_PROPOSAL_PREFIX } from '../../types/circles';
+import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
+import { EMMA_CONV_ID } from '../../data/emmaDemoProfile';
+import type { ConversationItem, MessageWithSender, MatchProposalPayload, AttachmentPayload } from '../../types/circles';
+import { MATCH_PROPOSAL_PREFIX, ATTACHMENT_PREFIX } from '../../types/circles';
+import { uploadAttachment } from '../../lib/attachments';
+import type { PendingAttachment } from '../../components/circles/MessageComposer';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,21 +82,35 @@ interface ChatDetailViewProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDetailViewProps) {
-  const { messages, loading, error, sendMessage, sending } = useMessages(
-    conversationItem.conversation.id
-  );
+  const isDemo = conversationItem.conversation.id === EMMA_CONV_ID;
+  const { tutorialStep, tutorialMessages, addUserMessage, advanceTutorial } = useGuestTutorial();
+  const navigate = useNavigate();
+
+  // For demo chat: pass null to skip Supabase calls; useMessages handles null safely
+  const {
+    messages: realMessages,
+    loading,
+    error,
+    sendMessage: realSendMessage,
+    sending: realSending,
+  } = useMessages(isDemo ? null : conversationItem.conversation.id);
+
+  const messages = isDemo ? tutorialMessages : realMessages;
+  const sending = isDemo ? false : realSending;
+
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const otherProfile = conversationItem.otherParticipants[0]?.profile ?? null;
   const otherUserId = otherProfile?.id ?? '';
-  const online = otherProfile ? isOnlineNow(otherProfile.last_seen) : false;
+  const online = isDemo ? true : (otherProfile ? isOnlineNow(otherProfile.last_seen) : false);
 
-  // Mark messages as read when entering the chat
+  // Mark messages as read when entering the chat (skip for demo)
   useEffect(() => {
-    markAsRead(conversationItem.conversation.id);
-  }, [conversationItem.conversation.id, markAsRead]);
+    if (!isDemo) markAsRead(conversationItem.conversation.id);
+  }, [conversationItem.conversation.id, markAsRead, isDemo]);
 
   // Auto-scroll to bottom whenever messages change
   useEffect(() => {
@@ -102,12 +122,64 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
     }
   }, [messages]);
 
-  // Also mark as read when new messages arrive
+  // Also mark as read when new messages arrive (skip for demo)
   useEffect(() => {
-    if (messages.length > 0) {
+    if (!isDemo && messages.length > 0) {
       markAsRead(conversationItem.conversation.id);
     }
-  }, [messages.length, conversationItem.conversation.id, markAsRead]);
+  }, [messages.length, conversationItem.conversation.id, markAsRead, isDemo]);
+
+  // ── Send (real or demo) ──────────────────────────────────────────────────
+  async function sendMessage(content: string, attachment?: PendingAttachment) {
+    setUploadError(null);
+
+    if (isDemo) {
+      if (attachment) {
+        const payload: AttachmentPayload = {
+          type: attachment.type,
+          url: attachment.previewUrl,  // blob URL is fine for the demo session
+          name: attachment.file.name,
+          size: attachment.file.size,
+          mimeType: attachment.file.type,
+          caption: content.trim() || undefined,
+        };
+        addUserMessage(ATTACHMENT_PREFIX + JSON.stringify(payload));
+      } else {
+        addUserMessage(content);
+      }
+      if (tutorialStep === 'send_message') {
+        advanceTutorial('emma_accepts');
+      }
+      return;
+    }
+
+    if (attachment) {
+      const { url, error: uploadErr } = await uploadAttachment(
+        attachment.file,
+        conversationItem.conversation.id,
+      );
+      if (!url) {
+        if (uploadErr === 'storage_not_configured') {
+          // Storage bucket not set up yet — silent fallback to plain text
+          await realSendMessage(`[Attachment: ${attachment.file.name}]`);
+        } else {
+          setUploadError(`Upload failed: ${uploadErr ?? 'Unknown error'}`);
+        }
+        return;
+      }
+      const payload: AttachmentPayload = {
+        type: attachment.type,
+        url,
+        name: attachment.file.name,
+        size: attachment.file.size,
+        mimeType: attachment.file.type,
+        caption: content.trim() || undefined,
+      };
+      await realSendMessage(ATTACHMENT_PREFIX + JSON.stringify(payload));
+    } else {
+      await realSendMessage(content);
+    }
+  }
 
   // ── Proposal handlers ────────────────────────────────────────────────────
   function handleSendProposal(payload: Omit<MatchProposalPayload, 'status' | 'proposedBy'>) {
@@ -232,8 +304,8 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
 
       </div>
 
-      {/* ── Schedule Overlap Bar ─────────────────────────────────────────── */}
-      {user?.id && otherUserId && (
+      {/* ── Schedule Overlap Bar (real chats only) ───────────────────────── */}
+      {!isDemo && user?.id && otherUserId && (
         <ScheduleOverlapBar
           myUserId={user.id}
           otherUserId={otherUserId}
@@ -287,11 +359,54 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
         {renderMessages(messages, handleAcceptProposal, handleAltProposal, handleDeclineProposal)}
       </div>
 
+      {/* ── Tutorial completion banner ────────────────────────────────────── */}
+      {isDemo && tutorialStep === 'complete' && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+          style={{
+            margin: '12px 12px 4px',
+            padding: '20px 16px',
+            borderRadius: 18,
+            background: 'rgba(22,212,106,0.10)',
+            border: '1px solid var(--color-acc)',
+            textAlign: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ fontSize: 28, marginBottom: 8 }}>🎾</div>
+          <p style={{
+            fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700,
+            color: 'var(--color-acc)', margin: '0 0 4px',
+          }}>
+            Tutorial Complete!
+          </p>
+          <p style={{
+            fontFamily: 'var(--font-body)', fontSize: 13,
+            color: 'var(--color-t2)', margin: '0 0 16px', lineHeight: 1.45,
+          }}>
+            You know the basics. Ready to find real players?
+          </p>
+          <button
+            onClick={() => navigate('/discover')}
+            style={{
+              background: 'var(--color-acc)', color: '#fff',
+              border: 'none', borderRadius: 999,
+              padding: '11px 28px', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14,
+            }}
+          >
+            Start Exploring →
+          </button>
+        </motion.div>
+      )}
+
       {/* ── Composer ─────────────────────────────────────────────────────── */}
       <MessageComposer
         onSend={sendMessage}
         sending={sending}
-        sendError={error}
+        sendError={isDemo ? null : (uploadError || error)}
         onSuggestTime={() => setSuggestOpen(true)}
       />
 

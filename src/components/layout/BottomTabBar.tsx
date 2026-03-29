@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Compass, Newspaper, Calendar, Users, Plus } from 'lucide-react';
 import { NotificationBadge } from '../ui/NotificationBadge';
 import { TABS, type TabId } from '../../types';
+import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
 
 interface BottomTabBarProps {
   unreadMessages?: number;
@@ -18,6 +20,19 @@ const tabIcons: Record<TabId, React.ComponentType<{ size?: number; strokeWidth?:
 export function BottomTabBar({ unreadMessages = 0, onCreateClick }: BottomTabBarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { tutorialStep, registerTarget } = useGuestTutorial();
+  const circlesTabRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (tutorialStep === 'go_to_messages') {
+      registerTarget('go_to_messages', circlesTabRef.current);
+    }
+    return () => {
+      if (tutorialStep === 'go_to_messages') {
+        registerTarget('go_to_messages', null);
+      }
+    };
+  }, [tutorialStep, registerTarget]);
 
   const activeTab = TABS.find((tab) => location.pathname.startsWith(tab.path))?.id || 'discover';
 
@@ -33,6 +48,7 @@ export function BottomTabBar({ unreadMessages = 0, onCreateClick }: BottomTabBar
     return (
       <button
         key={tab.id}
+        ref={tab.id === 'circles' ? circlesTabRef : undefined}
         onClick={() => navigate(tab.path)}
         style={{
           flex: 1,

@@ -10,4 +10,7 @@ export interface SwipeRightNotificationData {
   sport: string;           // Sport context (e.g., 'tennis', 'padel')
   connection_state: 'pending' | 'accepted' | 'rejected';
   conversation_id?: string; // Set after connection is accepted
+  senderName?: string;     // Name of the user who swiped right
+  senderAvatarUrl?: string | null; // Avatar URL of the user who swiped right
+  requestId?: string;      // ID for accepting/rejecting the connection
 }

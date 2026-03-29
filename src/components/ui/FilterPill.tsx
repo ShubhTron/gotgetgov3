@@ -36,7 +36,7 @@ interface FilterPillGroupProps {
 
 export function FilterPillGroup({ children, className }: FilterPillGroupProps) {
   return (
-    <div className={cn('flex items-center gap-2 overflow-x-auto pb-2 -mb-2', className)}>
+    <div className={cn('flex flex-wrap gap-2', className)}>
       {children}
     </div>
   );

@@ -198,29 +198,38 @@ export function ResultsPage() {
         <div>
           {/* ── Sport filter pills ─────────────────────────────────────── */}
           {userSports.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 16 }}>
-              {(['all', ...userSports] as SportFilter[]).map((sp) => {
-                const active = sportFilter === sp;
-                return (
-                  <button
-                    key={sp}
-                    onClick={() => setSportFilter(sp)}
-                    style={{
-                      flexShrink: 0,
-                      padding: '6px 16px',
-                      borderRadius: 'var(--radius-full)',
-                      border: active ? 'none' : '1px solid var(--color-bdr)',
-                      background: active ? 'var(--color-acc)' : 'var(--color-surf)',
-                      color: active ? '#fff' : 'var(--color-t2)',
-                      fontFamily: 'var(--font-body)', fontWeight: 600,
-                      fontSize: 13, cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {sp === 'all' ? 'All' : SPORTS[sp]?.name || sp}
-                  </button>
-                );
-              })}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{
+                fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: 'var(--color-t3)', margin: '0 0 8px',
+              }}>
+                Sport
+              </p>
+              <div className="hide-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as never, paddingBottom: 2 }}>
+                {(['all', ...userSports] as SportFilter[]).map((sp) => {
+                  const active = sportFilter === sp;
+                  return (
+                    <button
+                      key={sp}
+                      onClick={() => setSportFilter(sp)}
+                      style={{
+                        padding: '7px 18px',
+                        borderRadius: 'var(--radius-full)',
+                        border: active ? 'none' : '1px solid var(--color-bdr)',
+                        background: active ? 'var(--color-acc)' : 'var(--color-surf)',
+                        color: active ? '#fff' : 'var(--color-t2)',
+                        fontFamily: 'var(--font-body)', fontWeight: 600,
+                        fontSize: 13, cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {sp === 'all' ? 'All' : SPORTS[sp]?.name || sp}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

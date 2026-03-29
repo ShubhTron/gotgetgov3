@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, MessageCircle, UserRound, Users, Megaphone, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, IconSearch, IconPencil } from '../../design-system';
 import { StoriesStrip } from '../../components/circles/StoriesStrip';
 import { ConversationRow } from '../../components/circles/ConversationRow';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
 import { supabase } from '../../lib/supabase';
+import { searchUserById, determineSearchType, formatUserIdForDisplay } from '../../lib/userId';
+import { EMMA_CONVERSATION_ITEM, EMMA_CONV_ID } from '../../data/emmaDemoProfile';
 import type { ConversationItem } from '../../types/circles';
 import type { Profile } from '../../types/database';
+
+type CirclesTab = 'dms' | 'groups' | 'broadcast';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -22,10 +27,50 @@ interface CirclesListViewProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CirclesListView({ conversations, loading, error, onOpenChat, onNewChat }: CirclesListViewProps) {
-  const { profile } = useAuth();
+  const { profile, isGuest } = useAuth();
+  const { tutorialStep } = useGuestTutorial();
+  const [activeTab, setActiveTab] = useState<CirclesTab>('dms');
   const [searchQuery, setSearchQuery] = useState('');
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [allContacts, setAllContacts] = useState<Profile[]>([]);
+
+  // ── ID-based search state ────────────────────────────────────────────────
+  const [idResult, setIdResult] = useState<Profile | null>(null);
+  const [idSearching, setIdSearching] = useState(false);
+  const [idNotFound, setIdNotFound] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    const isId = determineSearchType(q) === 'id';
+
+    // Reset previous ID result whenever query changes
+    setIdResult(null);
+    setIdNotFound(false);
+
+    if (!isId || q.length < 3) {
+      setIdSearching(false);
+      return;
+    }
+
+    // Debounce: wait 500 ms after user stops typing
+    setIdSearching(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      const found = await searchUserById(q);
+      setIdSearching(false);
+      if (found) {
+        setIdResult(found);
+        setIdNotFound(false);
+      } else {
+        setIdNotFound(true);
+      }
+    }, 500);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery]);
 
   // Load all accepted connections once on mount so search is instant
   useEffect(() => {
@@ -42,22 +87,34 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
   }, [profile]);
 
   const q = searchQuery.trim().toLowerCase();
+  const isIdSearch = searchQuery.trim().startsWith('#');
 
-  const filtered = q
-    ? conversations.filter((c) =>
+  // Tutorial: inject Emma DM when in relevant tutorial steps
+  const EMMA_TUTORIAL_STEPS = ['go_to_messages', 'emma_greeting', 'send_message', 'emma_accepts', 'complete'];
+  const showEmmaDM = isGuest && EMMA_TUTORIAL_STEPS.includes(tutorialStep);
+
+  // Tab-based conversation split
+  const dmConvosBase = conversations.filter((c) => c.conversation.type === 'direct' && c.conversation.id !== EMMA_CONV_ID);
+  const dmConvos    = showEmmaDM ? [EMMA_CONVERSATION_ITEM, ...dmConvosBase] : dmConvosBase;
+  const groupConvos = conversations.filter((c) => c.conversation.type !== 'direct');
+  const tabConvos   = activeTab === 'dms' ? dmConvos : activeTab === 'groups' ? groupConvos : [];
+
+  const filtered = q && !isIdSearch
+    ? tabConvos.filter((c) =>
         c.displayName.toLowerCase().includes(q) ||
         (c.lastMessage?.content ?? '').toLowerCase().includes(q)
       )
-    : conversations;
+    : isIdSearch
+    ? []   // hide conversations during ID-mode; show ID result card instead
+    : tabConvos;
 
-  // Contacts that match the search but don't yet have a direct conversation
+  // Contacts that match the search but don't yet have a direct conversation (DMs tab only)
   const existingDmIds = new Set(
-    conversations
-      .filter((c) => c.conversation.type === 'direct')
+    dmConvos
       .map((c) => c.otherParticipants[0]?.profile?.id)
       .filter(Boolean)
   );
-  const contactSuggestions = q
+  const contactSuggestions = q && !isIdSearch && activeTab === 'dms'
     ? allContacts.filter(
         (p) =>
           (p.full_name ?? '').toLowerCase().includes(q) &&
@@ -146,7 +203,7 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
         </div>
       </div>
 
-      {/* ── Stories strip ───────────────────────────────────────────────── */}
+      {/* ── Stories strip (always visible) ──────────────────────────────── */}
       {profile && (
         <div style={{ flexShrink: 0 }}>
           <StoriesStrip
@@ -156,10 +213,40 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
         </div>
       )}
 
+      {/* ── Tab bar (below stories) ──────────────────────────────────────── */}
+      <div style={{ flexShrink: 0, display: 'flex', padding: '10px 16px 10px', gap: 8 }}>
+        {([
+          { id: 'dms' as CirclesTab,       label: 'DMs',       icon: <MessageCircle size={13} /> },
+          { id: 'groups' as CirclesTab,    label: 'Groups',    icon: <Users size={13} /> },
+          { id: 'broadcast' as CirclesTab, label: 'Broadcast', icon: <Megaphone size={13} /> },
+        ]).map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 14px',
+                borderRadius: 'var(--radius-full)',
+                border: active ? '1.5px solid var(--color-acc)' : '1px solid var(--color-bdr)',
+                background: 'var(--color-surf-2)',
+                color: active ? 'var(--color-acc)' : 'var(--color-t2)',
+                fontFamily: 'var(--font-body)', fontWeight: active ? 700 : 600, fontSize: 13,
+                cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0,
+              }}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Section label ────────────────────────────────────────────────── */}
-      {!loading && filtered.length > 0 && (
+      {!loading && !isIdSearch && filtered.length > 0 && activeTab !== 'broadcast' && (
         <div style={{ padding: '4px 16px 2px', flexShrink: 0 }}>
-          <SectionLabel label="Messages" />
+          <SectionLabel label={activeTab === 'dms' ? 'Messages' : 'Groups'} />
         </div>
       )}
 
@@ -172,14 +259,89 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
           paddingBottom: 8,
         } as React.CSSProperties}
       >
-        {loading && <SkeletonList />}
+        {/* ── Broadcast tab UI ─────────────────────────────────────────── */}
+        {activeTab === 'broadcast' && !loading && (
+          <BroadcastTab contacts={allContacts} />
+        )}
 
-        {!loading && error && (
+        {activeTab !== 'broadcast' && loading && <SkeletonList />}
+
+        {activeTab !== 'broadcast' && !loading && error && (
           <ErrorBanner message={error} />
         )}
 
-        {!loading && !error && filtered.length === 0 && contactSuggestions.length === 0 && (
-          <EmptyState hasSearch={searchQuery.trim().length > 0} />
+        {/* ── ID search result ─────────────────────────────────────────── */}
+        {isIdSearch && (
+          <>
+            {idSearching && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                <div style={{ width: 22, height: 22, border: '2.5px solid var(--color-bdr)', borderTopColor: 'var(--color-acc)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              </div>
+            )}
+
+            {!idSearching && idResult && (
+              <div style={{ margin: '12px 16px', borderRadius: 16, background: 'var(--color-surf-2)', border: '1px solid var(--color-bdr)', padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <Avatar name={idResult.full_name ?? '?'} imageUrl={idResult.avatar_url ?? undefined} size="lg" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 16, color: 'var(--color-t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {idResult.full_name ?? 'Unknown'}
+                    </p>
+                    <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-acc)', fontWeight: 600 }}>
+                      {formatUserIdForDisplay(idResult.id).toUpperCase()}
+                    </p>
+                    {idResult.location_city && (
+                      <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)' }}>
+                        📍 {idResult.location_city}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                  <button
+                    onClick={() => onNewChat(idResult.id, idResult)}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      padding: '9px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+                      background: 'var(--color-acc)', color: '#fff',
+                      fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 700,
+                    }}
+                  >
+                    <MessageCircle size={15} />
+                    Message
+                  </button>
+                  <button
+                    onClick={() => {/* view profile */}}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      padding: '9px 0', borderRadius: 10, cursor: 'pointer',
+                      background: 'var(--color-surf)', border: '1px solid var(--color-bdr)',
+                      fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, color: 'var(--color-t1)',
+                    }}
+                  >
+                    <UserRound size={15} />
+                    View Profile
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!idSearching && idNotFound && searchQuery.trim().length >= 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 32px', gap: 8 }}>
+                <span style={{ fontSize: 36 }}>🔍</span>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-t2)', textAlign: 'center', margin: 0 }}>
+                  No player found with that ID.
+                </p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)', textAlign: 'center', margin: 0 }}>
+                  IDs look like <strong style={{ color: 'var(--color-acc)' }}>#a3f5b2c1</strong>
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {!loading && !error && !isIdSearch && activeTab !== 'broadcast' && filtered.length === 0 && contactSuggestions.length === 0 && (
+          <EmptyState hasSearch={searchQuery.trim().length > 0} tab={activeTab} />
         )}
 
         {!loading &&
@@ -457,7 +619,11 @@ function SkeletonList() {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyState({ hasSearch }: { hasSearch: boolean }) {
+function EmptyState({ hasSearch, tab }: { hasSearch: boolean; tab?: CirclesTab }) {
+  const emoji = tab === 'groups' ? '👥' : '💬';
+  const blankMsg = tab === 'groups'
+    ? 'No group chats yet.\nCreate one with the ✏️ button above.'
+    : 'No circles yet.\nConnect with players on Discover.';
   return (
     <div
       style={{
@@ -470,7 +636,7 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
         gap: 10,
       }}
     >
-      <span style={{ fontSize: 40 }}>💬</span>
+      <span style={{ fontSize: 40 }}>{emoji}</span>
       <p
         style={{
           fontFamily: 'var(--font-body)',
@@ -479,12 +645,131 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
           textAlign: 'center',
           margin: 0,
           lineHeight: 1.5,
+          whiteSpace: 'pre-line',
         }}
       >
-        {hasSearch
-          ? 'No conversations match your search.'
-          : 'No circles yet.\nConnect with players on Discover.'}
+        {hasSearch ? 'No conversations match your search.' : blankMsg}
       </p>
+    </div>
+  );
+}
+
+// ─── Broadcast tab ────────────────────────────────────────────────────────────
+
+function BroadcastTab({ contacts }: { contacts: Profile[] }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [message, setMessage] = useState('');
+  const [sent, setSent] = useState(false);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function handleSend() {
+    if (!message.trim() || selected.size === 0) return;
+    // TODO: wire to actual send logic
+    setSent(true);
+    setTimeout(() => { setSent(false); setMessage(''); setSelected(new Set()); }, 2500);
+  }
+
+  return (
+    <div style={{ padding: '8px 16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 16, color: 'var(--color-t1)', margin: 0 }}>
+            Broadcast Message
+          </p>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)', margin: '2px 0 0' }}>
+            Send a message to multiple contacts at once
+          </p>
+        </div>
+        <Megaphone size={22} style={{ color: 'var(--color-acc)', flexShrink: 0 }} />
+      </div>
+
+      {/* Recipient selector */}
+      <div>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--color-t3)', margin: '0 0 10px' }}>
+          Recipients ({selected.size} selected)
+        </p>
+        {contacts.length === 0 ? (
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t3)', textAlign: 'center', padding: '16px 0' }}>
+            No connected contacts yet.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {contacts.map((c) => {
+              const checked = selected.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => toggle(c.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: checked ? 'var(--color-acc-bg)' : 'var(--color-surf-2)',
+                    textAlign: 'left', transition: 'background 0.12s',
+                  }}
+                >
+                  {/* Checkbox */}
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                    border: checked ? 'none' : '1.5px solid var(--color-bdr)',
+                    background: checked ? 'var(--color-acc)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {checked && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                  </div>
+                  <Avatar name={c.full_name ?? '?'} imageUrl={c.avatar_url ?? undefined} size="sm" />
+                  <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, color: 'var(--color-t1)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.full_name ?? 'Unknown'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Message input */}
+      <div>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--color-t3)', margin: '0 0 8px' }}>
+          Message
+        </p>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type your broadcast message…"
+          rows={3}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: 'var(--color-surf-2)', border: '1px solid var(--color-bdr)',
+            borderRadius: 12, padding: '10px 14px',
+            fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-t1)',
+            resize: 'none', outline: 'none',
+          }}
+        />
+      </div>
+
+      {/* Send button */}
+      <button
+        onClick={handleSend}
+        disabled={selected.size === 0 || !message.trim()}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          padding: '12px 0', borderRadius: 12, border: 'none', cursor: selected.size > 0 && message.trim() ? 'pointer' : 'not-allowed',
+          background: selected.size > 0 && message.trim() ? 'var(--color-acc)' : 'var(--color-surf-2)',
+          color: selected.size > 0 && message.trim() ? '#fff' : 'var(--color-t3)',
+          fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15,
+          transition: 'all 0.15s',
+        }}
+      >
+        {sent ? '✅ Sent!' : <><Plus size={16} /> Send to {selected.size > 0 ? `${selected.size} contact${selected.size > 1 ? 's' : ''}` : 'contacts'}</>}
+      </button>
     </div>
   );
 }

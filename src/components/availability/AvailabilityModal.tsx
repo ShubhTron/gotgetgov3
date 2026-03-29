@@ -138,11 +138,7 @@ export function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
           padding: '12px 20px 16px',
           borderBottom: '1px solid var(--color-bdr)',
         }}>
-          <h2 style={{
-            fontFamily: 'var(--font-display)', fontWeight: 700,
-            fontSize: 'var(--text-lg)', color: 'var(--color-t1)',
-            margin: 0,
-          }}>
+          <h2 className="font-display font-bold text-lg text-t1 m-0">
             Set Availability
           </h2>
           <button
@@ -173,12 +169,7 @@ export function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
             </div>
           ) : (
             <>
-              <p style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 'var(--text-sm)',
-                color: 'var(--color-t2)',
-                marginBottom: 20, marginTop: 0,
-              }}>
+              <p className="font-body text-sm text-t2 mb-5 mt-0">
                 Select days you're typically available to play.
               </p>
 
@@ -190,12 +181,12 @@ export function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
                     <button
                       key={index}
                       onClick={() => toggleDay(index)}
+                      className="font-body font-semibold"
                       style={{
                         width: 40, height: 40,
                         borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'var(--font-body)',
-                        fontSize: 13, fontWeight: 600,
+                        fontSize: 13,
                         border: 'none', cursor: 'pointer',
                         transition: 'all 0.15s',
                         background: isSelected ? 'var(--color-acc)' : 'var(--color-surf-2)',
@@ -237,14 +228,14 @@ export function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
           <button
             onClick={handleSave}
             disabled={saving}
+            className="font-body font-bold text-sm"
             style={{
               width: '100%', height: 50,
               borderRadius: 'var(--radius-full)',
               background: saving ? 'var(--color-t3)' : 'var(--color-acc)',
               border: 'none', cursor: saving ? 'default' : 'pointer',
               color: '#fff',
-              fontFamily: 'var(--font-body)', fontWeight: 700,
-              fontSize: 'var(--text-sm)', letterSpacing: '0.04em',
+              letterSpacing: '0.04em',
               boxShadow: saving ? 'none' : '0 4px 16px rgba(22,212,106,0.3)',
               transition: 'opacity 0.15s',
               opacity: saving ? 0.7 : 1,
@@ -255,6 +246,7 @@ export function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
 
           <button
             onClick={onClose}
+            className="font-body font-semibold text-sm"
             style={{
               width: '100%', height: 46,
               borderRadius: 'var(--radius-full)',
@@ -262,8 +254,6 @@ export function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
               border: '1px solid var(--color-bdr)',
               cursor: 'pointer',
               color: 'var(--color-t2)',
-              fontFamily: 'var(--font-body)', fontWeight: 600,
-              fontSize: 'var(--text-sm)',
             }}
           >
             Cancel

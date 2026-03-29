@@ -98,8 +98,7 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
 function PillRow({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="hide-scrollbar"
-      style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'scroll', WebkitOverflowScrolling: 'touch' as never, touchAction: 'pan-x', paddingBottom: 4 }}
+      style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
     >
       {children}
     </div>

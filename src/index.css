@@ -58,7 +58,7 @@
 
   /* Fonts (point Tailwind's `font-sans` to v3 body font) */
   --font-sans:                  var(--font-body);
-  --font-display:               var(--font-display);
+  --font-serif:                 var(--font-display);
 
   /* Border radius (shadcn uses --radius) */
   --radius:                     0.75rem;
@@ -95,9 +95,19 @@
   to { height: 0; }
 }
 
+/* ─── Font utilities ─────────────────────────────────────────────────────── */
+.font-body { font-family: var(--font-body); }
+.font-display { font-family: var(--font-display); }
+
 /* ─── Hide scrollbar utility ─────────────────────────────────────────────── */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─── Guest tutorial pulse ───────────────────────────────────────────────── */
+@keyframes tutorialPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 212, 106, 0.55); }
+  50%       { box-shadow: 0 0 0 8px rgba(22, 212, 106, 0); }
+}
 
 
 /* ─── Filter modal range sliders ─────────────────────────────────────────── */

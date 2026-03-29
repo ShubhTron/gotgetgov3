@@ -470,7 +470,16 @@ export async function submitMatchResult(
       }
     }
 
-    // 4. Insert score_confirmation_request notification for each opponent
+    // 4. Fetch submitter's name for notifications
+    const { data: submitterProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', payload.submittedBy)
+      .single();
+
+    const submitterName = submitterProfile?.full_name || 'Someone';
+
+    // 5. Insert score_confirmation_request notification for each opponent
     const opponentPlayers = payload.players.filter((p) => p.userId !== payload.submittedBy);
 
     for (const opponent of opponentPlayers) {
@@ -483,6 +492,7 @@ export async function submitMatchResult(
           resultId: result.id,
           sport: payload.sport,
           submittedBy: payload.submittedBy,
+          submitterName: submitterName,
         },
         read: false,
       });

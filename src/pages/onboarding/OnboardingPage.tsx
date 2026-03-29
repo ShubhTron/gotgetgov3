@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, AlertCircle, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Check, AlertCircle, ChevronDown, ArrowLeft, MapPin, Loader2 } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { TimeRangePicker, type TimeRange } from '@/components/ui/TimeRangePicker';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +60,19 @@ const STEP_DESCRIPTIONS: Record<Step, string> = {
   skill: 'This helps us match you with similar players.',
   availability: "Tap days you're typically available.",
   bio: 'A brief bio helps other players get to know you.',
+};
+
+const STEP_LABELS: Record<Step, string> = {
+  roles:             'ROLE SELECTION',
+  profile:           'YOUR PROFILE',
+  location_club:     'YOUR CLUB',
+  sports:            'SPORTS',
+  skill:             'SKILL LEVEL',
+  availability:      'AVAILABILITY',
+  bio:               'ABOUT YOU',
+  coach_sports:      'COACHING',
+  coach_specialties: 'SPECIALTIES',
+  coach_lessons:     'LESSON PACKAGES',
 };
 
 function getSportsStepTitle(roles: ClubRole[]): string {
@@ -182,39 +195,28 @@ const skillValueToString = (value: number): string => {
 const S = `
   :root{--text-muted:var(--color-t2);--text-dim:var(--color-t3)}
   .ob-root{background:var(--color-bg);font-family:var(--font-body);min-height:100vh;min-height:100dvh;position:relative;overflow:hidden}
-  .ob-court-bg{position:fixed;inset:0;background-image:url(/pickleball-paddle-court.webp);background-size:cover;background-position:center;filter:blur(8px) saturate(0.3) brightness(0.2);transform:scale(1.08);z-index:0}
-  .ob-hero-gradient{position:fixed;inset:0;z-index:1;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(22,212,106,0.12) 0%,transparent 65%),linear-gradient(180deg,rgba(6,12,26,0.1) 0%,rgba(6,12,26,0.45) 40%,rgba(6,12,26,0.82) 70%,var(--color-bg) 100%)}
+  .ob-court-bg{position:fixed;inset:0;background:var(--color-bg);z-index:0}
+  .ob-hero-gradient{position:fixed;inset:0;z-index:1;background:radial-gradient(ellipse 70% 38% at 50% 0%,rgba(22,212,106,0.08) 0%,transparent 60%)}
   .ob-grain{position:fixed;inset:0;pointer-events:none;z-index:2;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E")}
   .ob-court-lines{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;height:52%;z-index:1;pointer-events:none}
-  .ob-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:1;background:radial-gradient(circle,rgba(22,212,106,0.15) 0%,transparent 70%);filter:blur(48px)}
+  .ob-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:1;background:radial-gradient(circle,rgba(22,212,106,0.10) 0%,transparent 70%);filter:blur(48px)}
   .ob-content{position:relative;z-index:10;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;max-width:480px;margin:0 auto;padding:0 20px}
   .ob-header{display:flex;align-items:center;justify-content:space-between;padding:16px 0 10px;gap:12px}
   .ob-back-btn{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--color-surf);border:1px solid var(--color-bdr);color:var(--color-t1);cursor:pointer;transition:background 0.2s,transform 0.15s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
   .ob-back-btn:hover{background:var(--color-surf-2)}.ob-back-btn:active{transform:scale(0.94)}.ob-back-btn:disabled{opacity:0.25;cursor:not-allowed}
   .ob-skip-btn{font-family:var(--font-body);font-weight:500;font-size:0.9rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-t2);background:none;border:none;cursor:pointer;padding:8px 4px;transition:color 0.2s}
   .ob-skip-btn:hover{color:var(--color-t1)}
-  /* ── Progress — dots + step label ── */
-  .ob-progress-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
-  .ob-dots{display:flex;align-items:center;justify-content:center;gap:7px}
-  .ob-dot{
-    border-radius:50%;
-    transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);
-    flex-shrink:0;
-  }
-  .ob-dot.active{
-    width:24px;height:10px;
-    border-radius:5px;
-    background:var(--color-acc);
-    box-shadow:0 0 12px rgba(22,212,106,0.8);
-  }
-  .ob-dot.done{width:7px;height:7px;background:var(--color-acc-bg)}
-  .ob-dot.future{width:7px;height:7px;background:rgba(255,255,255,0.18)}
-  .ob-step-counter{
-    font-family:var(--font-body);font-size:0.68rem;font-weight:500;
-    letter-spacing:0.1em;color:var(--color-t3);text-transform:uppercase;
-  }
-  /* hide old bar */
-  .ob-progress-bar-track{display:none}
+  /* ── Progress — Kinetic bar style ── */
+  .ob-progress-wrap{flex:1;display:flex;align-items:center;justify-content:center}
+  .ob-app-name{font-family:var(--font-display);font-weight:900;font-size:1.1rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-t1);line-height:1}
+  .ob-dots{display:none}
+  .ob-dot{display:none}
+  .ob-progress-band{display:flex;flex-direction:column;gap:6px;padding:8px 0 12px}
+  .ob-progress-meta{display:flex;align-items:center;justify-content:space-between}
+  .ob-step-counter{font-family:var(--font-body);font-size:0.62rem;font-weight:700;letter-spacing:0.14em;color:var(--color-t3);text-transform:uppercase}
+  .ob-step-label{font-family:var(--font-body);font-size:0.62rem;font-weight:700;letter-spacing:0.14em;color:var(--color-acc);text-transform:uppercase}
+  .ob-progress-bar-track{width:100%;height:3px;border-radius:var(--radius-full);background:var(--color-bdr);overflow:hidden}
+  .ob-progress-bar-fill{height:100%;border-radius:var(--radius-full);background:var(--color-acc);box-shadow:0 0 8px rgba(22,212,106,0.5);transition:width 0.45s cubic-bezier(0.22,1,0.36,1)}
   .ob-divider{height:1px;background:linear-gradient(90deg,transparent,var(--color-acc),transparent);opacity:0.35;margin:4px 0 20px}
   .ob-step-title{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:clamp(2rem,9vw,2.8rem);color:var(--color-t1);line-height:1.1;letter-spacing:-0.5px;margin-bottom:8px}
   .ob-step-title span{color:var(--color-acc)}
@@ -389,16 +391,21 @@ const S = `
   .ob-success-check{width:72px;height:72px;border-radius:50%;background:var(--color-acc-bg);border:2px solid var(--color-acc);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 0 32px rgba(22,212,106,0.3)}
   .ob-spinner{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;animation:ob-spin 0.7s linear infinite}
   @keyframes ob-spin{to{transform:rotate(360deg)}}
-  .ob-role-card{position:relative;border-radius:14px;padding:20px 16px;cursor:pointer;border:2px solid rgba(255,255,255,0.08);background:var(--color-surf);transition:border-color 0.2s,background 0.2s,transform 0.15s;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;gap:8px;min-height:110px}
-  .ob-role-card.selected{border-color:var(--color-acc);background:var(--color-acc-bg)}
-  .ob-role-card.disabled{opacity:0.38;cursor:not-allowed}
-  .ob-role-card:hover:not(.disabled):not(.selected){background:var(--color-surf-2);transform:scale(1.02)}
-  .ob-role-card:active:not(.disabled){transform:scale(0.97)}
-  .ob-role-card-icon{font-size:1.6rem;line-height:1}
-  .ob-role-card-title{font-family:var(--font-display);font-weight:700;font-size:1rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-t1)}
-  .ob-role-card-desc{font-family:var(--font-body);font-size:0.75rem;color:var(--color-t2)}
-  .ob-role-card-check{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;background:var(--color-acc);display:flex;align-items:center;justify-content:center}
-  .ob-coming-soon-badge{position:absolute;top:8px;right:8px;font-family:var(--font-body);font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:2px 6px;color:var(--color-t1)}
+  /* ── Role rows — vertical pill list ── */
+  .ob-role-row{display:flex;align-items:center;gap:14px;min-height:72px;padding:0 16px 0 12px;border-radius:var(--radius-full);border:1.5px solid var(--color-bdr);background:var(--color-surf);cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:relative;user-select:none}
+  .ob-role-row.selected{border-color:var(--color-acc);background:var(--color-acc-bg)}
+  .ob-role-row.disabled{opacity:0.38;cursor:not-allowed;pointer-events:none}
+  .ob-role-row:active:not(.disabled){transform:scale(0.985)}
+  .ob-role-row-icon{width:44px;height:44px;border-radius:50%;flex-shrink:0;background:var(--color-surf-2);border:1px solid var(--color-bdr);display:flex;align-items:center;justify-content:center;font-size:1.3rem;line-height:1;transition:background 0.2s,border-color 0.2s}
+  .ob-role-row.selected .ob-role-row-icon{background:var(--color-acc);border-color:var(--color-acc)}
+  .ob-role-row-body{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+  .ob-role-row-title{font-family:var(--font-body);font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-t1);line-height:1.2}
+  .ob-role-row-desc{font-family:var(--font-body);font-size:0.72rem;color:var(--color-t2);line-height:1.3}
+  .ob-role-row-check{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1.5px solid var(--color-bdr);display:flex;align-items:center;justify-content:center;transition:background 0.2s,border-color 0.2s;background:transparent}
+  .ob-role-row.selected .ob-role-row-check{background:var(--color-acc);border-color:var(--color-acc)}
+  .ob-role-row-lock{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1.5px solid var(--color-bdr);background:var(--color-surf-2);display:flex;align-items:center;justify-content:center;color:var(--color-t3)}
+  .ob-coming-soon-badge{position:absolute;top:-8px;right:16px;font-family:var(--font-body);font-size:0.58rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:var(--color-surf-2);border:1px solid var(--color-bdr);border-radius:var(--radius-full);padding:2px 8px;color:var(--color-t3)}
+  .ob-role-card,.ob-role-card-icon,.ob-role-card-title,.ob-role-card-desc,.ob-role-card-check{display:none}
   .ob-club-result{padding:12px 14px;border-radius:10px;font-family:var(--font-body);font-size:0.9rem;font-weight:500;color:var(--color-t1);background:var(--color-surf);border:1px solid var(--color-bdr);cursor:pointer;transition:background 0.15s;text-align:left;width:100%}
   .ob-club-result:hover{background:var(--color-surf-2)}
   .ob-club-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:var(--color-acc-bg);border:1px solid var(--color-bdr);font-family:var(--font-body);font-size:0.82rem;font-weight:500;color:var(--color-t1)}
@@ -705,7 +712,7 @@ export function OnboardingPage() {
         }
       }
       setShowSuccess(true);
-      setTimeout(() => navigate('/discover'), 2000);
+      setTimeout(() => navigate('/discover'), 3000);
     } catch (err) {
       console.error('Onboarding error:', err);
     } finally {
@@ -732,18 +739,6 @@ export function OnboardingPage() {
         <div className="ob-court-bg" />
         <div className="ob-hero-gradient" />
         <div className="ob-grain" />
-        {/* Subtle court lines texture at bottom */}
-        <svg className="ob-court-lines" viewBox="0 0 480 320" preserveAspectRatio="xMidYMax meet" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="40" y="20" width="400" height="280" rx="2" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
-          <line x1="240" y1="20" x2="240" y2="300" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
-          <line x1="40" y1="160" x2="440" y2="160" stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
-          <line x1="40" y1="90" x2="440" y2="90" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
-          <line x1="40" y1="230" x2="440" y2="230" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
-          <ellipse cx="240" cy="160" rx="52" ry="52" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
-          <circle cx="240" cy="160" r="4" fill="rgba(255,255,255,0.08)"/>
-          <line x1="40" y1="20" x2="440" y2="300" stroke="rgba(22,212,106,0.04)" strokeWidth="0.8"/>
-          <line x1="440" y1="20" x2="40" y2="300" stroke="rgba(22,212,106,0.04)" strokeWidth="0.8"/>
-        </svg>
         <div className="ob-orb" style={{ width: 360, height: 360, top: -100, right: -80 }} />
         <div className="ob-orb" style={{ width: 260, height: 260, bottom: 80, left: -60, opacity: 0.55 }} />
         <div className="ob-content">
@@ -752,14 +747,24 @@ export function OnboardingPage() {
               <ArrowLeft size={18} />
             </button>
             <div className="ob-progress-wrap">
-              <div className="ob-dots">
-                {steps.map((_, i) => (
-                  <div key={i} className={`ob-dot${i === currentStep ? ' active' : i < currentStep ? ' done' : ' future'}`} />
-                ))}
-              </div>
-              <span className="ob-step-counter">Step {currentStep + 1} of {steps.length}</span>
+              <span className="ob-app-name">Got-Get-Go</span>
             </div>
             <button className="ob-skip-btn" onClick={handleSkip}>Skip</button>
+          </div>
+
+          <div className="ob-progress-band">
+            <div className="ob-progress-meta">
+              <span className="ob-step-counter">
+                STEP {String(currentStep + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
+              </span>
+              <span className="ob-step-label">{STEP_LABELS[step]}</span>
+            </div>
+            <div className="ob-progress-bar-track">
+              <div
+                className="ob-progress-bar-fill"
+                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              />
+            </div>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 120 }}>
@@ -867,10 +872,10 @@ function SuccessModal() {
         overflow: 'hidden',
       }}
     >
-      {/* Background glow orbs */}
-      <div style={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(22,212,106,0.18) 0%, transparent 70%)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(22,212,106,0.12) 0%, transparent 70%)', top: '30%', right: '-10%', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 38% at 50% 0%, rgba(22,212,106,0.08) 0%, transparent 60%)', zIndex: 1 }} />
 
+      {/* All content above background */}
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
       {/* Animated ring + check */}
       <div style={{ position: 'relative', marginBottom: 48 }}>
         {/* Outer pulse ring */}
@@ -972,7 +977,7 @@ function SuccessModal() {
         </p>
 
         {/* Loading bar */}
-        <div style={{ width: 160, height: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 2, margin: '0 auto', overflow: 'hidden' }}>
+        <div style={{ width: 160, height: 2, background: 'var(--color-bdr)', borderRadius: 2, margin: '0 auto', overflow: 'hidden' }}>
           <motion.div
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
@@ -989,6 +994,7 @@ function SuccessModal() {
           Taking you to discover
         </motion.p>
       </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -1316,61 +1322,66 @@ function RolesStep({ data, setData }: StepProps) {
   const isClubAdminSelected = data.selectedRoles.includes('club_admin');
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-      {/* Player — toggleable */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* Player */}
       <div
-        className={`ob-role-card${isPlayerSelected ? ' selected' : ''}`}
+        className={`ob-role-row${isPlayerSelected ? ' selected' : ''}`}
         onClick={() => setData(prev => ({ ...prev, selectedRoles: toggleRole(prev.selectedRoles, 'player') }))}
       >
-        {isPlayerSelected && (
-          <div className="ob-role-card-check">
-            <Check size={11} color="var(--color-bg)" strokeWidth={3} />
-          </div>
-        )}
-        <span className="ob-role-card-icon">🎾</span>
-        <span className="ob-role-card-title">Player</span>
-        <span className="ob-role-card-desc">Find matches &amp; connect</span>
+        <div className="ob-role-row-icon">🎾</div>
+        <div className="ob-role-row-body">
+          <span className="ob-role-row-title">Player</span>
+          <span className="ob-role-row-desc">Find matches &amp; connect</span>
+        </div>
+        <div className="ob-role-row-check">
+          {isPlayerSelected && <Check size={12} color="var(--color-bg)" strokeWidth={3} />}
+        </div>
       </div>
 
-      {/* Coach — toggleable */}
+      {/* Coach */}
       <div
-        className={`ob-role-card${isCoachSelected ? ' selected' : ''}`}
+        className={`ob-role-row${isCoachSelected ? ' selected' : ''}`}
         onClick={() => setData(prev => ({ ...prev, selectedRoles: toggleRole(prev.selectedRoles, 'coach') }))}
       >
-        {isCoachSelected && (
-          <div className="ob-role-card-check">
-            <Check size={11} color="var(--color-bg)" strokeWidth={3} />
-          </div>
-        )}
-        <span className="ob-role-card-icon">🏆</span>
-        <span className="ob-role-card-title">Coach</span>
-        <span className="ob-role-card-desc">Teach &amp; build your roster</span>
+        <div className="ob-role-row-icon">🏆</div>
+        <div className="ob-role-row-body">
+          <span className="ob-role-row-title">Coach</span>
+          <span className="ob-role-row-desc">Teach &amp; build your roster</span>
+        </div>
+        <div className="ob-role-row-check">
+          {isCoachSelected && <Check size={12} color="var(--color-bg)" strokeWidth={3} />}
+        </div>
       </div>
 
-      {/* Club Admin — toggleable */}
+      {/* Club Admin */}
       <div
-        className={`ob-role-card${isClubAdminSelected ? ' selected' : ''}`}
+        className={`ob-role-row${isClubAdminSelected ? ' selected' : ''}`}
         onClick={() => setData(prev => ({ ...prev, selectedRoles: toggleRole(prev.selectedRoles, 'club_admin') }))}
       >
-        {isClubAdminSelected && (
-          <div className="ob-role-card-check">
-            <Check size={11} color="var(--color-bg)" strokeWidth={3} />
-          </div>
-        )}
-        <span className="ob-role-card-icon">🏟️</span>
-        <span className="ob-role-card-title">Club Admin</span>
-        <span className="ob-role-card-desc">Manage your club</span>
+        <div className="ob-role-row-icon">🏟️</div>
+        <div className="ob-role-row-body">
+          <span className="ob-role-row-title">Club Admin</span>
+          <span className="ob-role-row-desc">Manage your club</span>
+        </div>
+        <div className="ob-role-row-check">
+          {isClubAdminSelected && <Check size={12} color="var(--color-bg)" strokeWidth={3} />}
+        </div>
       </div>
 
-      {/* Competition Organizer — coming soon, non-interactive */}
-      <div
-        className="ob-role-card"
-        style={{ opacity: 0.38, pointerEvents: 'none' }}
-      >
+      {/* Organizer — disabled */}
+      <div className="ob-role-row disabled">
         <span className="ob-coming-soon-badge">Coming Soon</span>
-        <span className="ob-role-card-icon">🗓️</span>
-        <span className="ob-role-card-title">Organizer</span>
-        <span className="ob-role-card-desc">Run tournaments</span>
+        <div className="ob-role-row-icon">🗓️</div>
+        <div className="ob-role-row-body">
+          <span className="ob-role-row-title">Organizer</span>
+          <span className="ob-role-row-desc">Run tournaments</span>
+        </div>
+        <div className="ob-role-row-lock">
+          <svg width="11" height="13" viewBox="0 0 11 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="5.5" width="9" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
+            <path d="M3.5 5.5V3.5a2 2 0 0 1 4 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+        </div>
       </div>
     </div>
   );
@@ -1663,6 +1674,7 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
   const [selectedClub, setSelectedClub] = useState<SelectedClub | null>(null);
   const [membershipRole, setMembershipRole] = useState<ClubRole>('player');
   const [createError, setCreateError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
   const { results, loading } = useClubSearch(
     query,
     data.locationLat,
@@ -1736,6 +1748,44 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
         value={query}
         onChange={e => { setQuery(e.target.value); setCreateError(null); }}
       />
+
+      {/* Location indicator */}
+      {data.locationCity ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'var(--color-acc-bg)', border: '1px solid rgba(22,212,106,0.3)', borderRadius: 10 }}>
+          <MapPin size={13} color="var(--color-acc)" strokeWidth={2.2} />
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-acc)' }}>
+            Near {data.locationCity}
+          </span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: 'var(--color-t3)', marginLeft: 'auto' }}>
+            Within 25 km
+          </span>
+        </div>
+      ) : (
+        <button
+          className="ob-skill-btn"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center', padding: '12px 16px' }}
+          onClick={() => {
+            setLocating(true);
+            navigator.geolocation?.getCurrentPosition(
+              pos => {
+                setData(prev => ({ ...prev, locationLat: pos.coords.latitude, locationLng: pos.coords.longitude, locationDetected: true }));
+                fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&localityLanguage=en`)
+                  .then(r => r.json())
+                  .then(d => setData(prev => ({ ...prev, locationCity: [d.city, d.principalSubdivision].filter(Boolean).join(', ') })))
+                  .catch(() => {})
+                  .finally(() => setLocating(false));
+              },
+              () => setLocating(false)
+            );
+          }}
+          disabled={locating}
+        >
+          {locating
+            ? <Loader2 size={14} strokeWidth={2.2} style={{ animation: 'spin 1s linear infinite' }} />
+            : <MapPin size={14} strokeWidth={2.2} />}
+          {locating ? 'Locating...' : 'Use My Location'}
+        </button>
+      )}
 
       {createError && (
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'rgba(255,100,100,0.9)', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>

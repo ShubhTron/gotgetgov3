@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
 import { supabase } from '../../lib/supabase';
 import { haversineKm } from '../../lib/haversine';
 import { eloMatchScore, getLevelElo } from '../../lib/elo';
 import { FilterTriptych } from '../../components/layout/FilterTriptych';
 import { InteractionBar } from '../../components/discover/InteractionBar';
 import { SwipeDeck } from '../../components/discover/SwipeDeck';
+import { EMMA_DISCOVER_PLAYER, EMMA_USER_ID } from '../../data/emmaDemoProfile';
 import type { DiscoverPlayer, FilterSport, FilterSkill, MatchRecord } from '../../types/discover';
 import type { SportType } from '../../types/index';
 
@@ -53,7 +55,9 @@ function formatDate(iso: string): string {
 const TEN_MINUTES = 10 * 60 * 1000;
 
 export function DiscoverPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, isGuest } = useAuth();
+  const { tutorialStep, advanceTutorial, registerTarget, resetTutorial } = useGuestTutorial();
+  const deckRef = useRef<HTMLDivElement>(null);
   const [players, setPlayers] = useState<DiscoverPlayer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -201,6 +205,15 @@ export function DiscoverPage() {
   }, [players, swipedIds, matchCache]);
 
   const handleSwipeRight = useCallback(async (id: string) => {
+    // Tutorial: intercept Emma's card swipe
+    if (id === EMMA_USER_ID) {
+      setSwipedIds(prev => new Set([...prev, id]));
+      setLastSwipe({ id, direction: 'right' });
+      setTriggerSwipe({ id, direction: 'right' });
+      setTimeout(() => setTriggerSwipe(null), 400);
+      advanceTutorial('go_to_notifications');
+      return;
+    }
     const player = players.find(p => p.id === id);
     if (!player || !user) return;
     setSwipedIds(prev => new Set([...prev, id]));
@@ -210,7 +223,7 @@ export function DiscoverPage() {
     await (supabase.from('swipe_matches') as any).upsert({
       user_id: user.id, target_user_id: id, sport: player.sport, direction: 'right',
     }, { onConflict: 'user_id,target_user_id,sport' });
-  }, [players, user]);
+  }, [players, user, advanceTutorial]);
 
   const handleSwipeLeft = useCallback(async (id: string) => {
     const player = players.find(p => p.id === id);
@@ -254,9 +267,26 @@ export function DiscoverPage() {
     }
   }, [players, swipedIds, favoriteIds, user]);
 
-  const topPlayer = players.find(p => !swipedIds.has(p.id));
+  // Register deck container as spotlight target for swipe_card step
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (tutorialStep === 'swipe_card') {
+      registerTarget('swipe_card', deckRef.current);
+    }
+    return () => {
+      if (tutorialStep === 'swipe_card') registerTarget('swipe_card', null);
+    };
+  }, [tutorialStep]);
 
-  if (!user) {
+  // Build display list: prepend Emma in tutorial mode
+  const displayPlayers: DiscoverPlayer[] =
+    (isGuest && tutorialStep === 'swipe_card')
+      ? [EMMA_DISCOVER_PLAYER, ...players.filter(p => p.id !== EMMA_USER_ID)]
+      : players;
+
+  const topPlayer = displayPlayers.find(p => !swipedIds.has(p.id));
+
+  if (!user && !isGuest) {
     return (
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
@@ -270,7 +300,7 @@ export function DiscoverPage() {
     );
   }
 
-  if (loading) {
+  if (!isGuest && loading) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-t2)' }}>
@@ -289,13 +319,16 @@ export function DiscoverPage() {
         onSkillChange={setSkill}
       />
 
-      <SwipeDeck
-        players={players}
-        onSwipeRight={handleSwipeRight}
-        onSwipeLeft={handleSwipeLeft}
-        undoId={undoId}
-        triggerSwipe={triggerSwipe}
-      />
+      <div ref={deckRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <SwipeDeck
+          players={displayPlayers}
+          onSwipeRight={handleSwipeRight}
+          onSwipeLeft={handleSwipeLeft}
+          undoId={undoId}
+          triggerSwipe={triggerSwipe}
+          onReset={isGuest ? resetTutorial : undefined}
+        />
+      </div>
 
       <InteractionBar
         onPass={() => topPlayer && handleSwipeLeft(topPlayer.id)}

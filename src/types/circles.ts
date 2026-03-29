@@ -85,3 +85,17 @@ export interface MatchProposalPayload {
 }
 
 export const MATCH_PROPOSAL_PREFIX = '__MATCH_PROPOSAL__:';
+
+// ─── Attachment embedded in a message ─────────────────────────────────────────
+
+/** Stored in message.content as: __ATTACHMENT__:{json} */
+export interface AttachmentPayload {
+  type: 'image' | 'video' | 'audio' | 'document';
+  url: string;       // Supabase Storage public URL (or blob URL in demo)
+  name: string;      // Original filename
+  size: number;      // Bytes
+  mimeType: string;
+  caption?: string;  // Optional text entered alongside the file
+}
+
+export const ATTACHMENT_PREFIX = '__ATTACHMENT__:';

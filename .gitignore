@@ -35,8 +35,7 @@ build
 *.sw?
 
 # Kiro/Claude specific
-.claude/*
-!.claude/launch.json
+.claude
 .kiro/settings/
 
 # OS files
@@ -53,4 +52,24 @@ coverage
 *.tmp
 *.temp
 .cache
+
+# Package manager lock files (optional - uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Debug files
+*.log.*
+.pnpm-debug.log
+
+# Storybook
+storybook-static
+
+# Misc
+.eslintcache
+*.swp
+*~
+
+# Documentation
+*.md
 

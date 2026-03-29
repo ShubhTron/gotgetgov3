@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Users, Trophy, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGuestTutorial } from '@/contexts/GuestTutorialContext';
 import { AuthBottomSheet } from './AuthBottomSheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -40,6 +41,7 @@ export function LandingPage() {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
   const navigate = useNavigate();
   const { enterGuestMode } = useAuth();
+  const { startTutorial } = useGuestTutorial();
 
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get('ref');
@@ -97,10 +99,10 @@ export function LandingPage() {
                 filter: 'blur(20px)', borderRadius: '50%',
               }} />
               <img
-                src="/Screenshot_2026-03-06_at_09.46.10.png"
+                src="/logo.png"
                 alt="GotGetGo"
                 className="relative object-contain"
-                style={{ width: 72, height: 72, filter: 'drop-shadow(0 0 12px rgba(22,212,106,0.5))' }}
+                style={{ width: 80, height: 80, filter: 'drop-shadow(0 0 12px rgba(22,212,106,0.5))' }}
               />
             </div>
 
@@ -176,7 +178,7 @@ export function LandingPage() {
             variant="outline"
             size="lg"
             style={{ width: '100%', marginBottom: 12 }}
-            onClick={() => { enterGuestMode(); navigate('/discover'); }}
+            onClick={() => { enterGuestMode(); startTutorial(); navigate('/discover'); }}
           >
             Continue as Guest
           </Button>
