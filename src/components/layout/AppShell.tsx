@@ -4,7 +4,8 @@ import { Search, Bell, Trophy, LogIn, User, Settings, LogOut, ChevronDown } from
 import { Header } from './Header';
 import { BottomTabBar } from './BottomTabBar';
 import { DesktopNav } from './DesktopNav';
-import { CreateMenu, type CreateMenuItem } from './CreateMenu';
+import { CreateMenu, type CreateMenuItemId } from './CreateMenu';
+type CreateMenuItem = CreateMenuItemId;
 import { SearchModal } from './SearchModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { FilterProvider, useFilters } from '../../contexts/FilterContext';
@@ -52,7 +53,7 @@ function AppShellContent({ children }: AppShellProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isProfileMenuOpen]);
 
-  const unreadDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const unreadDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!user?.id) return;

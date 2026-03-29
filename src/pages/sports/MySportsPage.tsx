@@ -50,7 +50,7 @@ export function MySportsPage() {
     try {
       await supabase.from('user_sport_profiles').delete().eq('user_id', user!.id);
       for (const sport of selectedSports) {
-        await supabase.from('user_sport_profiles').insert({
+        await (supabase.from('user_sport_profiles') as any).insert({
           user_id: user!.id,
           sport,
           self_assessed_level: skillValueToString(sportLevels[sport] ?? 0),

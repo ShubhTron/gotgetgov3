@@ -57,7 +57,7 @@ export function CreateCirclePage() {
       const connectionList = connectionsRes.data
         .filter((d) => d.profiles)
         .map((d) => {
-          const profile = d.profiles as { id: string; full_name: string; avatar_url?: string };
+          const profile = d.profiles as unknown as { id: string; full_name: string; avatar_url?: string };
           return {
             id: profile.id,
             name: profile.full_name,
@@ -124,7 +124,7 @@ export function CreateCirclePage() {
           }
         }
       } else {
-        const { data: team, error: teamError } = await supabase.from('teams').insert({
+        const { data: team, error: teamError } = await (supabase.from('teams') as any).insert({
           name: name.trim(),
           sport: selectedSport,
           created_by: user.id,

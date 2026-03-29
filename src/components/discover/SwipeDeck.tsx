@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { IconRefreshCw } from '../../design-system';
 import type { DiscoverPlayer } from '../../types/discover';
+
+export type SwipeCard = DiscoverPlayer;
 import { PlayerCard } from './PlayerCard';
 
 interface SwipeDeckProps {

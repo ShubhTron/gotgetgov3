@@ -122,7 +122,7 @@ export function GroupInfoModal({
     const result = await promoteToAdmin({
       conversationId,
       adminId: user.id,
-      memberIdToPromote: memberId,
+      subscriberIdToPromote: memberId,
     });
     if (!result.success) {
       setActionError(result.error || 'Failed to promote member');
@@ -291,10 +291,10 @@ export function GroupInfoModal({
                               {isMe && <span style={{ color: 'var(--color-t3)' }} className="font-normal"> (you)</span>}
                             </span>
                             {member.isCreator && (
-                              <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" title="Creator" />
+                              <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                             )}
                             {member.isAdmin && !member.isCreator && (
-                              <Shield className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--color-acc)' }} title="Admin" />
+                              <Shield className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--color-acc)' }} />
                             )}
                           </div>
                         </div>

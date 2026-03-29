@@ -1,6 +1,6 @@
 export * from './database';
-export * from './discover';
-export * from './connectionRequests';
+export type { MatchRecord, DiscoverPlayer, Player, Coach, FilterSport, FilterSkill } from './discover';
+export type { ConnectionRequestStatus, ConnectionRequestWithProfile, CreateConnectionRequestResponse, ConnectionRequestListResponse, AcceptConnectionRequestResponse, RejectConnectionRequestResponse, CancelConnectionRequestResponse } from './connectionRequests';
 
 export interface User {
   id: string;
@@ -16,7 +16,7 @@ export interface SportInfo {
   officialRatingSystem?: string;
 }
 
-export const SPORTS: Record<string, SportInfo> = {
+export const SPORTS = {
   platform_tennis: {
     id: 'platform_tennis',
     name: 'Platform Tennis',
@@ -27,6 +27,7 @@ export const SPORTS: Record<string, SportInfo> = {
     id: 'padel',
     name: 'Padel',
     icon: 'racquet',
+    officialRatingSystem: undefined,
   },
   tennis: {
     id: 'tennis',
@@ -56,28 +57,33 @@ export const SPORTS: Record<string, SportInfo> = {
     id: 'badminton',
     name: 'Badminton',
     icon: 'shuttlecock',
+    officialRatingSystem: undefined,
   },
   table_tennis: {
     id: 'table_tennis',
     name: 'Table Tennis',
     icon: 'paddle',
+    officialRatingSystem: undefined,
   },
   racquetball_squash57: {
     id: 'racquetball_squash57',
     name: 'Racquetball / Squash 57',
     icon: 'racquet',
+    officialRatingSystem: undefined,
   },
   beach_tennis: {
     id: 'beach_tennis',
     name: 'Beach Tennis',
     icon: 'racquet',
+    officialRatingSystem: undefined,
   },
   real_tennis: {
     id: 'real_tennis',
     name: 'Real Tennis',
     icon: 'racquet',
+    officialRatingSystem: undefined,
   },
-};
+} satisfies Record<string, SportInfo>;
 
 export const SKILL_LEVELS = [
   { value: 'beginner', label: 'Beginner' },

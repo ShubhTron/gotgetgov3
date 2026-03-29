@@ -89,7 +89,7 @@ export async function getSentRequests(
     .eq('requester_id', userId);
 
   if (status) {
-    query = query.eq('status', status);
+    query = query.eq('status', status as 'accepted' | 'cancelled' | 'pending' | 'rejected');
   }
 
   query = query.order('created_at', { ascending: false });
@@ -140,7 +140,7 @@ export async function getReceivedRequests(
     .eq('recipient_id', userId);
 
   if (status) {
-    query = query.eq('status', status);
+    query = query.eq('status', status as 'accepted' | 'cancelled' | 'pending' | 'rejected');
   }
 
   query = query.order('created_at', { ascending: false });
@@ -182,7 +182,7 @@ export async function updateRequestStatus(
   const { data, error } = await supabase
     .from('connection_requests')
     .update({
-      status,
+      status: status as 'accepted' | 'cancelled' | 'pending' | 'rejected',
       status_changed_at: statusChangedAt
     })
     .eq('id', id)

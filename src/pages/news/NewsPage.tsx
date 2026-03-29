@@ -85,7 +85,7 @@ export function NewsPage() {
 
   const fetchAcceptedConnections = async () => {
     if (!user) return;
-    const { data: connections } = await supabase
+    const { data: connectionsRaw } = await supabase
       .from('connections')
       .select(`id, user_id, connected_user_id, status, updated_at,
         user:user_id (id, full_name, avatar_url),
@@ -93,11 +93,12 @@ export function NewsPage() {
       .eq('status', 'accepted')
       .order('updated_at', { ascending: false })
       .limit(10);
+    const connections = connectionsRaw as any[] | null;
 
     if (connections && connections.length > 0) {
       const connectionItems: FeedItem[] = connections.map((conn) => {
-        const userProfile = conn.user as unknown as { id: string; full_name: string; avatar_url: string | null };
-        const connectedProfile = conn.connected as unknown as { id: string; full_name: string; avatar_url: string | null };
+        const userProfile = conn.user as { id: string; full_name: string; avatar_url: string | null } | null;
+        const connectedProfile = conn.connected as { id: string; full_name: string; avatar_url: string | null } | null;
         return {
           id: `connection-${conn.id}`,
           type: 'connection_accepted' as const,

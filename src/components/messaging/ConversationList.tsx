@@ -143,7 +143,7 @@ function SwipeableRow({ conversation, onSelect, onPinToggle, isUserAdmin }: Swip
 
       {/* Draggable row */}
       <motion.div
-        style={{ x }}
+        style={{ x, background: 'var(--color-surf)' }}
         drag="x"
         dragConstraints={{ left: -ACTION_WIDTH, right: 0 }}
         dragElastic={0.05}
@@ -155,7 +155,6 @@ function SwipeableRow({ conversation, onSelect, onPinToggle, isUserAdmin }: Swip
         animate={controls}
         onClick={handleRowClick}
         className="relative flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
-        style={{ background: 'var(--color-surf)' }}
       >
         {/* Avatar */}
         <div className="relative flex-shrink-0">
@@ -233,9 +232,9 @@ export function ConversationList() {
   const [userSearchLoading, setUserSearchLoading] = useState(false);
   const [userAdminStatus, setUserAdminStatus] = useState<Map<string, boolean>>(new Map());
 
-  const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const subscriptionSetupRef = useRef(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (user?.id) loadConversations();
@@ -339,7 +338,7 @@ export function ConversationList() {
             .select('*')
             .ilike('full_name', `%${q}%`)
             .limit(5);
-          setUserResults(data || []);
+          setUserResults((data as Profile[]) || []);
         }
       } catch {
         setUserResults([]);

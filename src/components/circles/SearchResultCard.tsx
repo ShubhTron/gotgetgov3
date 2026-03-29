@@ -50,12 +50,22 @@ export function SearchResultCard({
     id: user.id,
     fullName: user.full_name,
     avatarUrl: user.avatar_url || undefined,
-    sport: 'tennis', // Default sport - could be enhanced with user's primary sport
-    level: 'intermediate', // Default level - could be enhanced with user's actual level
-    distance: 0, // Not applicable for search results
-    availabilityOverlap: 0, // Not applicable for search results
+    sport: 'tennis' as import('@/types').SportType,
+    sportName: 'Tennis',
+    level: 'intermediate',
+    levelLabel: 'Intermediate',
+    distanceKm: 0,
+    isActiveRecently: false,
+    availability: '',
+    preferredTime: '',
+    homeClub: '',
+    scheduleOverlapLabel: '',
+    compatibilityScore: 0,
+    recentMatches: [],
+    distance: 0,
+    availabilityOverlap: 0,
     playStyle: user.bio || undefined,
-  };
+  } as unknown as Player;
 
   return (
     <div className="relative">

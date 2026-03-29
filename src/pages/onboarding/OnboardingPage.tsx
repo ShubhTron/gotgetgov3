@@ -632,7 +632,7 @@ export function OnboardingPage() {
       }
       await updateProfile({ full_name: data.fullName, avatar_url: avatarUrl || null, location_city: data.locationCity || null, location_country: null, location_lat: data.locationLat, location_lng: data.locationLng, bio: data.bio, onboarding_completed: true });
       for (const sport of data.selectedSports) {
-        await supabase.from('user_sport_profiles').upsert({ user_id: user!.id, sport, self_assessed_level: skillValueToString(data.sportLevels[sport] ?? 1) });
+        await (supabase.from('user_sport_profiles') as any).upsert({ user_id: user!.id, sport, self_assessed_level: skillValueToString(data.sportLevels[sport] ?? 1) });
       }
       for (const entry of data.availability) {
         for (const range of entry.ranges) {
@@ -1230,7 +1230,7 @@ function SkillStep({ data, setData }: StepProps) {
                     className="ob-rating-toggle"
                     onClick={() => setData(prev => ({ ...prev, showRatings: { ...prev.showRatings, [sport]: !prev.showRatings[sport] } }))}
                   >
-                    <span>Have a {sportInfo.officialRatingSystem} rating?</span>
+                    <span>Have a {sportInfo?.officialRatingSystem} rating?</span>
                     <ChevronDown size={12} style={{ transform: data.showRatings[sport] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                   </button>
                   <AnimatePresence>
@@ -1239,7 +1239,7 @@ function SkillStep({ data, setData }: StepProps) {
                         <div style={{ marginTop: 10 }}>
                           <input
                             className="ob-input"
-                            placeholder={`Enter your ${sportInfo.officialRatingSystem} rating`}
+                            placeholder={`Enter your ${sportInfo?.officialRatingSystem} rating`}
                             value={data.externalRatings[sport] || ''}
                             onChange={e => setData(prev => ({ ...prev, externalRatings: { ...prev.externalRatings, [sport]: e.target.value } }))}
                           />

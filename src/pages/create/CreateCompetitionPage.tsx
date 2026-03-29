@@ -103,7 +103,7 @@ export function CreateCompetitionPage() {
     if (clubsRes.data) {
       const clubList = clubsRes.data
         .filter((d) => d.clubs)
-        .map((d) => ({ id: (d.clubs as { id: string; name: string }).id, name: (d.clubs as { id: string; name: string }).name }));
+        .map((d) => ({ id: (d.clubs as unknown as { id: string; name: string }).id, name: (d.clubs as unknown as { id: string; name: string }).name }));
       setClubs(clubList);
       if (clubList.length === 1) {
         setSelectedClub(clubList[0]);
@@ -116,11 +116,11 @@ export function CreateCompetitionPage() {
       .from('ladders')
       .select('id, name, match_type, ladder_entries(count)')
       .eq('club_id', selectedClub!.id)
-      .eq('sport', selectedSport)
+      .eq('sport', selectedSport as any)
       .eq('is_active', true);
 
     if (data && data.length > 0) {
-      const ladders = data.map((l) => ({
+      const ladders = (data as any[]).map((l) => ({
         id: l.id,
         name: l.name,
         match_type: l.match_type,
@@ -145,10 +145,10 @@ export function CreateCompetitionPage() {
         .limit(1)
         .maybeSingle();
 
-      await supabase.from('ladder_entries').insert({
+      await (supabase.from('ladder_entries') as any).insert({
         ladder_id: ladderId,
         user_id: user!.id,
-        position: (maxPosition?.position || 0) + 1,
+        position: ((maxPosition as any)?.position || 0) + 1,
       });
 
       navigate(-1);
@@ -182,7 +182,7 @@ export function CreateCompetitionPage() {
 
     try {
       if (competitionType === 'ladder') {
-        const { data: ladder, error } = await supabase.from('ladders').insert({
+        const { data: ladder, error } = await (supabase.from('ladders') as any).insert({
           club_id: selectedClub!.id,
           name,
           sport: selectedSport,
@@ -196,13 +196,13 @@ export function CreateCompetitionPage() {
 
         if (error) throw error;
 
-        await supabase.from('ladder_entries').insert({
-          ladder_id: ladder.id,
+        await (supabase.from('ladder_entries') as any).insert({
+          ladder_id: (ladder as any).id,
           user_id: user!.id,
           position: 1,
         });
       } else if (competitionType === 'league') {
-        await supabase.from('competitions').insert({
+        await (supabase.from('competitions') as any).insert({
           club_id: selectedClub!.id,
           name,
           sport: selectedSport,
@@ -222,7 +222,7 @@ export function CreateCompetitionPage() {
           created_by: user!.id,
         });
       } else if (competitionType === 'tournament') {
-        await supabase.from('competitions').insert({
+        await (supabase.from('competitions') as any).insert({
           club_id: selectedClub!.id,
           name,
           sport: selectedSport,
@@ -303,10 +303,9 @@ export function CreateCompetitionPage() {
                           ? { background: 'color-mix(in srgb, var(--color-acc) 20%, transparent)' }
                           : { background: '#e5e7eb' }}
                       >
-                        <Icon
-                          className="w-5 h-5"
-                          style={{ color: competitionType === type.id ? 'var(--color-acc)' : 'var(--color-t3)' }}
-                        />
+                        <span style={{ color: competitionType === type.id ? 'var(--color-acc)' : 'var(--color-t3)', display: 'flex' }}>
+                          <Icon className="w-5 h-5" />
+                        </span>
                       </div>
                       <div>
                         <p className="text-label font-semibold" style={{ color: 'var(--color-t1)' }}>{type.label}</p>

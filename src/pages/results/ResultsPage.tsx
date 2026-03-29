@@ -126,21 +126,21 @@ export function ResultsPage() {
   };
 
   useEffect(() => {
-    loadData(sportFilter === 'all' ? undefined : sportFilter);
+    loadData(sportFilter === 'all' ? undefined : (sportFilter as SportType));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, sportFilter]);
 
   const handleMatchScored = () => {
     setShowScoreModal(false);
     setPreselectedMatch(undefined);
-    loadData(sportFilter === 'all' ? undefined : sportFilter);
+    loadData(sportFilter === 'all' ? undefined : (sportFilter as SportType));
   };
 
   const handleConfirm = async (resultId: string) => {
     setConfirmingId(resultId);
     await confirmResult(resultId);
     setConfirmingId(null);
-    loadData(sportFilter === 'all' ? undefined : sportFilter);
+    loadData(sportFilter === 'all' ? undefined : (sportFilter as SportType));
   };
 
   const handleDispute = async (resultId: string) => {
@@ -148,7 +148,7 @@ export function ResultsPage() {
     setDisputingId(resultId);
     await disputeResult(resultId, user.id);
     setDisputingId(null);
-    loadData(sportFilter === 'all' ? undefined : sportFilter);
+    loadData(sportFilter === 'all' ? undefined : (sportFilter as SportType));
   };
 
   const confirmedResults = matchResults.filter((m) => m.status === 'confirmed');
@@ -242,7 +242,7 @@ export function ResultsPage() {
               <AlertCircle size={28} style={{ color: 'var(--color-red)' }} />
               <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-t2)', margin: 0 }}>{error}</p>
               <button
-                onClick={() => loadData(sportFilter === 'all' ? undefined : sportFilter)}
+                onClick={() => loadData(sportFilter === 'all' ? undefined : (sportFilter as SportType))}
                 style={{
                   padding: '8px 20px', borderRadius: 'var(--radius-full)',
                   border: '1px solid var(--color-bdr)', background: 'var(--color-surf)',

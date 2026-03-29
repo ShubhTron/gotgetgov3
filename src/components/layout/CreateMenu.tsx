@@ -137,7 +137,7 @@ function CreateMenuItemButton({ item, onClick }: { item: CreateMenuItem; onClick
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}>
-        <Icon size={18} strokeWidth={2} style={{ color: 'var(--color-acc)' } as React.CSSProperties} />
+        <span style={{ color: 'var(--color-acc)', display: 'flex' }}><Icon size={18} strokeWidth={2} /></span>
       </div>
       <div>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, color: 'var(--color-t1)', marginBottom: 2 }}>

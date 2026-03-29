@@ -37,7 +37,7 @@ export function UserIdSearch({
       .limit(10);
 
     if (error) throw error;
-    return data || [];
+    return (data as Profile[]) || [];
   }
 
   /**

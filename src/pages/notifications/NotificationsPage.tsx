@@ -650,7 +650,7 @@ export function NotificationsPage() {
                 key={t}
                 onClick={() => setTab(t)}
                 style={{
-                  padding: '7px 16px', borderRadius: 999, border: 'none',
+                  padding: '7px 16px', borderRadius: 999,
                   background: active ? 'var(--color-acc)' : 'var(--color-surf)',
                   color: active ? '#fff' : 'var(--color-t2)',
                   fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13,

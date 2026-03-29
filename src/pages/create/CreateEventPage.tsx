@@ -62,7 +62,7 @@ export function CreateEventPage() {
     }
 
     if (clubsRes.data) {
-      const clubList = clubsRes.data
+      const clubList = (clubsRes.data as any[])
         .filter((d) => d.clubs)
         .map((d) => ({ id: (d.clubs as { id: string; name: string }).id, name: (d.clubs as { id: string; name: string }).name }));
       setClubs(clubList);
@@ -111,10 +111,10 @@ export function CreateEventPage() {
         recurrenceRule = `FREQ=${recurrenceFrequency.toUpperCase()};UNTIL=${recurrenceEndDate.replace(/-/g, '')}`;
       }
 
-      const { error } = await supabase.from('events').insert({
+      const { error } = await (supabase.from('events') as any).insert({
         club_id: selectedClub!.id,
         created_by: user!.id,
-        sport: selectedSport,
+        sport: selectedSport as SportType,
         name: eventName,
         description: description || null,
         start_time: startDateTime.toISOString(),
@@ -230,10 +230,9 @@ export function CreateEventPage() {
                           ? { background: 'color-mix(in srgb, var(--color-acc) 20%, transparent)' }
                           : { background: '#e5e7eb' }}
                       >
-                        <Icon
-                          className="w-5 h-5"
-                          style={{ color: eventType === type.id ? 'var(--color-acc)' : 'var(--color-t3)' }}
-                        />
+                        <span style={{ color: eventType === type.id ? 'var(--color-acc)' : 'var(--color-t3)', display: 'flex' }}>
+                          <Icon className="w-5 h-5" />
+                        </span>
                       </div>
                       <div>
                         <p className="text-label font-semibold" style={{ color: 'var(--color-t1)' }}>{type.label}</p>

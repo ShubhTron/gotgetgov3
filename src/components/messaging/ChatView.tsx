@@ -63,13 +63,13 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
   const [pendingMessages, setPendingMessages] = useState<Map<string, ChatMessage>>(new Map());
 
   // Typing indicator state
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const typingDebounceRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isTypingRef = useRef(false);
-  const typingUserTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const typingUserTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Presence tracking state
-  const inactivityTimeoutRef = useRef<NodeJS.Timeout>();
+  const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastActivityRef = useRef<number>(Date.now());
 
   // Load initial messages

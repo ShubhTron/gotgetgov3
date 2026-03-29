@@ -154,10 +154,10 @@ export function ScoreMatchModal({ open, onOpenChange, onScored, preselectedMatch
       .from('connections')
       .select('id,connected_user_id,user_id,connected:connected_user_id (id, full_name, avatar_url)')
       .or(`user_id.eq.${user.id},connected_user_id.eq.${user.id}`)
-      .eq('status', 'accepted');
+      .eq('status', 'accepted') as unknown as { data: { id: string; connected_user_id: string; user_id: string; connected: { id: string; full_name: string; avatar_url: string | null } | null }[] | null };
     if (data) {
       const mapped: Connection[] = data.map((conn) => {
-        const profile = conn.connected as unknown as { id: string; full_name: string; avatar_url: string | null };
+        const profile = conn.connected;
         const isMe = conn.connected_user_id === user.id;
         if (isMe) return { id: conn.user_id, name: 'Other User', avatarUrl: undefined };
         return { id: profile?.id || conn.connected_user_id, name: profile?.full_name || 'Player', avatarUrl: profile?.avatar_url || undefined };

@@ -36,7 +36,7 @@ export async function fetchPendingScoreMatches(
   try {
     // Query challenges where user is a player, score_status = 'score_pending',
     // and no linked match_result exists yet.
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('challenges')
       .select(`
         id,

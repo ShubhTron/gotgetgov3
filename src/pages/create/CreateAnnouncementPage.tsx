@@ -53,8 +53,8 @@ export function CreateAnnouncementPage() {
       const clubList = data
         .filter((d) => d.clubs)
         .map((d) => ({
-          id: (d.clubs as { id: string; name: string }).id,
-          name: (d.clubs as { id: string; name: string }).name,
+          id: (d.clubs as unknown as { id: string; name: string }).id,
+          name: (d.clubs as unknown as { id: string; name: string }).name,
         }));
       setClubs(clubList);
     }

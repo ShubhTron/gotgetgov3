@@ -90,7 +90,7 @@ export function DiscoverPage() {
       supabase.from('swipe_matches')
         .select('target_user_id')
         .eq('user_id', user.id)
-        .eq('sport', sport === 'all' ? 'tennis' : sport),
+        .eq('sport', (sport === 'all' ? 'tennis' : sport) as any),
     ]);
 
     const profiles      = (profilesRes.data ?? []) as any[];
@@ -245,7 +245,7 @@ export function DiscoverPage() {
       .delete()
       .eq('user_id', user.id)
       .eq('target_user_id', lastSwipe.id)
-      .eq('sport', player.sport);
+      .eq('sport', player.sport as any);
     setSwipedIds(prev => { const n = new Set(prev); n.delete(lastSwipe.id); return n; });
     setUndoId(lastSwipe.id);
     setTimeout(() => setUndoId(null), 100);

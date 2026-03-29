@@ -95,7 +95,7 @@ export function CreateMatchPage() {
     }
 
     if (clubsRes.data) {
-      const clubList = clubsRes.data
+      const clubList = (clubsRes.data as any[])
         .filter((d) => d.clubs)
         .map((d) => ({ id: (d.clubs as { id: string; name: string }).id, name: (d.clubs as { id: string; name: string }).name }));
       setClubs(clubList);
@@ -105,7 +105,7 @@ export function CreateMatchPage() {
     }
 
     if (connectionsRes.data) {
-      const playerList = connectionsRes.data
+      const playerList = (connectionsRes.data as any[])
         .filter((d) => d.profiles)
         .map((d) => {
           const profile = d.profiles as { id: string; full_name: string; avatar_url?: string };
@@ -175,7 +175,7 @@ export function CreateMatchPage() {
       const proposedTimes = timeSlots.map((slot) => `${slot.date} ${slot.time}`);
 
       if (postingMode === 'open') {
-        const { data: challenge, error } = await supabase.from('challenges').insert({
+        const { data: challenge, error } = await (supabase.from('challenges') as any).insert({
           proposed_by: user!.id,
           sport: selectedSport,
           format: matchType,
@@ -190,16 +190,16 @@ export function CreateMatchPage() {
 
         if (error) throw error;
 
-        await supabase.from('challenge_players').insert({
-          challenge_id: challenge.id,
+        await (supabase.from('challenge_players') as any).insert({
+          challenge_id: (challenge as any).id,
           user_id: user!.id,
           team_number: 1,
           response: 'accepted',
         });
 
         if (partner) {
-          await supabase.from('challenge_players').insert({
-            challenge_id: challenge.id,
+          await (supabase.from('challenge_players') as any).insert({
+            challenge_id: (challenge as any).id,
             user_id: partner.id,
             team_number: 1,
             response: 'pending',
@@ -208,7 +208,7 @@ export function CreateMatchPage() {
 
         navigate('/discover');
       } else {
-        const { data: challenge, error } = await supabase.from('challenges').insert({
+        const { data: challenge, error } = await (supabase.from('challenges') as any).insert({
           proposed_by: user!.id,
           sport: selectedSport,
           format: matchType,
@@ -223,16 +223,16 @@ export function CreateMatchPage() {
 
         if (error) throw error;
 
-        await supabase.from('challenge_players').insert({
-          challenge_id: challenge.id,
+        await (supabase.from('challenge_players') as any).insert({
+          challenge_id: (challenge as any).id,
           user_id: user!.id,
           team_number: 1,
           response: 'accepted',
         });
 
         for (const player of selectedPlayers) {
-          await supabase.from('challenge_players').insert({
-            challenge_id: challenge.id,
+          await (supabase.from('challenge_players') as any).insert({
+            challenge_id: (challenge as any).id,
             user_id: player.id,
             team_number: 2,
             response: 'pending',
@@ -240,8 +240,8 @@ export function CreateMatchPage() {
         }
 
         if (partner) {
-          await supabase.from('challenge_players').insert({
-            challenge_id: challenge.id,
+          await (supabase.from('challenge_players') as any).insert({
+            challenge_id: (challenge as any).id,
             user_id: partner.id,
             team_number: 1,
             response: 'pending',

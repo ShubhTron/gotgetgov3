@@ -11,7 +11,17 @@
  */
 
 import { supabase } from './supabase';
-import type { Story } from '../components/discover/StoryViewer';
+
+export interface Story {
+  id: string;
+  user_id: string;
+  type: string;
+  content: string;
+  audience: string;
+  expires_at: string;
+  created_at: string;
+  [key: string]: unknown;
+}
 
 /**
  * Fetch active stories for a specific user

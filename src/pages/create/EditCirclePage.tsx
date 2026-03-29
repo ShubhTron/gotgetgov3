@@ -63,11 +63,11 @@ export function EditCirclePage() {
     ]);
 
     const connectionMap = new Map<string, Connection>();
-    connectionsOutRes.data?.filter((d) => d.profiles).forEach((d) => {
+    (connectionsOutRes.data as any[] || []).filter((d) => d.profiles).forEach((d) => {
       const profile = d.profiles as { id: string; full_name: string; avatar_url?: string };
       connectionMap.set(profile.id, { id: profile.id, name: profile.full_name, avatarUrl: profile.avatar_url });
     });
-    connectionsInRes.data?.filter((d) => d.profiles).forEach((d) => {
+    (connectionsInRes.data as any[] || []).filter((d) => d.profiles).forEach((d) => {
       const profile = d.profiles as { id: string; full_name: string; avatar_url?: string };
       if (!connectionMap.has(profile.id)) {
         connectionMap.set(profile.id, { id: profile.id, name: profile.full_name, avatarUrl: profile.avatar_url });
@@ -90,7 +90,7 @@ export function EditCirclePage() {
       }
 
       if (membersRes.data) {
-        const memberList = membersRes.data
+        const memberList = (membersRes.data as any[])
           .filter((m) => m.profiles)
           .map((m) => {
             const profile = m.profiles as { id: string; full_name: string; avatar_url?: string };
@@ -118,7 +118,7 @@ export function EditCirclePage() {
       }
 
       if (membersRes.data) {
-        const memberList = membersRes.data
+        const memberList = (membersRes.data as any[])
           .filter((m) => m.profiles)
           .map((m) => {
             const profile = m.profiles as { id: string; full_name: string; avatar_url?: string };
@@ -139,7 +139,7 @@ export function EditCirclePage() {
     if (members.find((m) => m.id === connection.id)) return;
 
     if (groupType === 'circle') {
-      const { error } = await supabase.from('circle_members').insert({
+      const { error } = await (supabase.from('circle_members') as any).insert({
         circle_id: id,
         user_id: connection.id,
         role: 'member',
@@ -148,7 +148,7 @@ export function EditCirclePage() {
         setMembers([...members, { ...connection, role: 'member' }]);
       }
     } else {
-      const { error } = await supabase.from('team_members').insert({
+      const { error } = await (supabase.from('team_members') as any).insert({
         team_id: id,
         user_id: connection.id,
       });

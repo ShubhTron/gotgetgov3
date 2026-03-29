@@ -280,10 +280,10 @@ export function ChannelInfoModal({
                               {isMe && <span style={{ color: 'var(--color-t3)' }} className="font-normal"> (you)</span>}
                             </span>
                             {admin.isCreator && (
-                              <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" title="Creator" />
+                              <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                             )}
                             {!admin.isCreator && (
-                              <Shield className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--color-acc)' }} title="Admin" />
+                              <Shield className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--color-acc)' }} />
                             )}
                           </div>
                         </div>

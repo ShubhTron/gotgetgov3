@@ -4,9 +4,9 @@
  */
 
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ReactNode, useState, useEffect, useCallback, useRef } from 'react';
+import { type ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, SlidersHorizontal, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
-import type { Player } from './PlayerCard';
+import type { Player } from '../../types/discover';
 
 export interface FullscreenViewProps {
   player: Player;

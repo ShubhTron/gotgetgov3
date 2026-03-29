@@ -41,7 +41,7 @@ export function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
     if (!error && data) {
       const entriesMap = new Map<number, TimeRange[]>();
 
-      data.forEach((row) => {
+      (data as any[]).forEach((row) => {
         const existing = entriesMap.get(row.day_of_week) || [];
         entriesMap.set(row.day_of_week, [...existing, { start: row.start_time, end: row.end_time }]);
       });

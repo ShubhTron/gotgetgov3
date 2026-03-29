@@ -1289,12 +1289,12 @@ export function subscribeToPresence(
       
       // Process presence state
       Object.entries(state).forEach(([userId, presences]) => {
-        const presence = presences[0] as { status: 'online' | 'away' | 'offline' };
+        const presence = presences[0] as unknown as { status: 'online' | 'away' | 'offline' };
         onPresenceChange(userId, presence.status);
       });
     })
     .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-      const presence = newPresences[0] as { status: 'online' | 'away' | 'offline' };
+      const presence = newPresences[0] as unknown as { status: 'online' | 'away' | 'offline' };
       onPresenceChange(key, presence.status);
     })
     .on('presence', { event: 'leave' }, ({ key }) => {

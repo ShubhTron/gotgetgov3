@@ -694,7 +694,7 @@ function SignUpScreen({ onNavigate }: { onNavigate: (s: AuthScreen) => void }) {
 // ─── AuthFlow (exported) ──────────────────────────────────────────────────────
 
 export function AuthFlow() {
-  const { continueAsGuest } = useAuth();
+  const { enterGuestMode: continueAsGuest } = useAuth();
   const [screen, setScreen] = useState<AuthScreen>('welcome');
   const isCard = screen === 'signin' || screen === 'signup';
 

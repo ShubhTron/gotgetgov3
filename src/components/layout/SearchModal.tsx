@@ -147,7 +147,7 @@ export function SearchModal({ isOpen, onClose, onFilterChange, userSports = [] }
     let cancelled = false;
     setUuidLoading(true);
     supabase.from('profiles').select('*').eq('id', query).maybeSingle().then(({ data }) => {
-      if (!cancelled) { setUuidResult(data ?? null); setUuidLoading(false); }
+      if (!cancelled) { setUuidResult((data as Profile) ?? null); setUuidLoading(false); }
     });
     return () => { cancelled = true; };
   }, [query]);

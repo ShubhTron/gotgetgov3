@@ -63,7 +63,7 @@ export async function createBroadcastChannel(params: {
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .insert({
-        type: 'broadcast',
+        type: 'group' as 'direct' | 'circle' | 'team' | 'group',
         name: name.trim(),
         avatar_url: avatarUrl || null,
         created_by: creatorId,
@@ -128,7 +128,7 @@ export async function getBroadcastChannel(channelId: string): Promise<BroadcastC
     .from('conversations')
     .select('id, name, avatar_url, created_by, created_at')
     .eq('id', channelId)
-    .eq('type', 'broadcast')
+    .eq('type', 'broadcast' as unknown as 'direct' | 'circle' | 'team' | 'group')
     .single();
 
   if (!conv) return null;
@@ -204,7 +204,8 @@ export function subscribeToBroadcastChannel(
       if (status === 'SUBSCRIBED') {
         console.log('✅ Subscribed to broadcast channel:', channelId);
         // Set auth token for private channel authorization
-        await supabase.realtime.setAuth(supabase.auth.session()?.access_token);
+        const { data: sessionData } = await supabase.auth.getSession();
+        await supabase.realtime.setAuth(sessionData.session?.access_token ?? null);
       } else if (status === 'CHANNEL_ERROR') {
         console.error('❌ Channel subscription error');
       } else if (status === 'TIMED_OUT') {

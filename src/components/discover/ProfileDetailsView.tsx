@@ -67,7 +67,7 @@ export function ProfileDetailsView({
         />
         <PerformanceGraphSection
           performanceData={profileDetails?.performanceData}
-          currentRating={player.eloRating || (player.rating ? parseFloat(player.rating) : undefined)}
+          currentRating={player.eloRating || (player.rating ? parseFloat(String(player.rating)) : undefined)}
           sport={player.sport}
         />
         <LatestUpdatesSection

@@ -2,6 +2,8 @@ import { Avatar, Chip, SectionTitle, Divider, MatchRow } from '../../design-syst
 import { IconPin, IconCalendar, IconZap, IconClock, IconArrowRight } from '../../design-system';
 import type { DiscoverPlayer } from '../../types/discover';
 
+export type Player = DiscoverPlayer;
+
 interface PlayerCardProps {
   player: DiscoverPlayer;
   scrollable?: boolean;

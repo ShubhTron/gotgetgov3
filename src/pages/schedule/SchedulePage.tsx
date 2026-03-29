@@ -142,7 +142,7 @@ export function SchedulePage() {
     const joinedItems: ScheduleItem[] = [];
 
     if (eventsRes.data) {
-      eventsRes.data.forEach((reg) => {
+      (eventsRes.data as any[]).forEach((reg) => {
         const event = reg.events as unknown as {
           id: string; name: string; start_time: string; end_time?: string;
           court_name?: string; sport?: SportType; clubs?: { name: string };
@@ -164,7 +164,7 @@ export function SchedulePage() {
     }
 
     if (competitionsRes.data) {
-      competitionsRes.data.forEach((entry) => {
+      (competitionsRes.data as any[]).forEach((entry) => {
         const comp = entry.competitions as unknown as {
           id: string; name: string; start_date?: string; end_date?: string;
           sport?: SportType; competition_type?: string; clubs?: { name: string };
@@ -186,7 +186,7 @@ export function SchedulePage() {
     }
 
     if (challengesRes.data) {
-      challengesRes.data.forEach((cp) => {
+      (challengesRes.data as any[]).forEach((cp) => {
         const challenge = cp.challenges as unknown as {
           id: string; sport?: SportType; format?: string; location?: string;
           proposed_times?: string[]; status?: string; proposed_by?: string;
