@@ -22,11 +22,12 @@ interface CirclesListViewProps {
   error: string | null;
   onOpenChat: (item: ConversationItem) => void;
   onNewChat: (contactId: string, contactProfile: Profile) => void;
+  scrollContainerRef: React.RefObject<HTMLDivElement>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CirclesListView({ conversations, loading, error, onOpenChat, onNewChat }: CirclesListViewProps) {
+export function CirclesListView({ conversations, loading, error, onOpenChat, onNewChat, scrollContainerRef }: CirclesListViewProps) {
   const { profile, isGuest } = useAuth();
   const { tutorialStep } = useGuestTutorial();
   const [activeTab, setActiveTab] = useState<CirclesTab>('dms');
@@ -252,6 +253,7 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
 
       {/* ── Conversation list ────────────────────────────────────────────── */}
       <div
+        ref={scrollContainerRef}
         style={{
           flex: 1,
           overflowY: 'auto',

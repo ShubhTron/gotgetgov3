@@ -24,7 +24,7 @@ build
 .env.production.local
 
 # Editor directories and files
-.vscode/*
+*.vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -70,6 +70,6 @@ storybook-static
 *.swp
 *~
 
-# Documentation
-*.md
+# Documentation (commented out to allow README and spec docs)
+# *.md
 
