@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { IconRefreshCw } from '../../design-system';
+import { IconUserPlus } from '../../design-system';
 import type { DiscoverPlayer } from '../../types/discover';
 
 export type SwipeCard = DiscoverPlayer;
@@ -162,6 +162,19 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerS
 
   const visible = players.filter(p => !dismissed.has(p.id));
 
+  const handleInvite = () => {
+    const shareData = {
+      title: 'Join me on GotGet',
+      text: 'Find players and book courts near you!',
+      url: window.location.origin,
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareData.url).catch(() => {});
+    }
+  };
+
   if (visible.length === 0) {
     return (
       <div style={{
@@ -169,7 +182,7 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerS
         alignItems: 'center', justifyContent: 'center',
         gap: 'var(--space-4)', padding: 'var(--space-8)',
       }}>
-        <IconRefreshCw size={32} style={{ color: 'var(--color-t3)' }} />
+        <IconUserPlus size={32} style={{ color: 'var(--color-t3)' }} />
         <div style={{
           fontFamily: 'var(--font-body)', fontSize: 'var(--text-md)',
           fontWeight: 600, color: 'var(--color-t1)', textAlign: 'center',
@@ -180,10 +193,10 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerS
           fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
           color: 'var(--color-t2)', textAlign: 'center',
         }}>
-          Check back soon
+          Know someone who plays? Invite them!
         </div>
         <button
-          onClick={() => { setDismissed(new Set()); onReset?.(); }}
+          onClick={handleInvite}
           style={{
             marginTop: 'var(--space-2)',
             fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
@@ -192,7 +205,7 @@ export function SwipeDeck({ players, onSwipeRight, onSwipeLeft, undoId, triggerS
             textDecoration: 'underline',
           }}
         >
-          Reset
+          Invite More Players
         </button>
       </div>
     );

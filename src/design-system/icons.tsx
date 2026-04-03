@@ -189,6 +189,18 @@ export function IconUser({ size = 22, style }: IconProps) {
   );
 }
 
+export function IconUserPlus({ size = 22, style }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  );
+}
+
 export function IconRefreshCw({ size = 32, style }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -286,6 +298,20 @@ export function IconCopy({ size = 16, style }: IconProps) {
       stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={style}>
       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+export function IconSlidersHorizontal({ size = 16, style }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <line x1="21" y1="6" x2="3" y2="6" />
+      <line x1="21" y1="12" x2="3" y2="12" />
+      <line x1="21" y1="18" x2="3" y2="18" />
+      <circle cx="8" cy="6" r="2" fill="var(--color-surf)" />
+      <circle cx="16" cy="12" r="2" fill="var(--color-surf)" />
+      <circle cx="10" cy="18" r="2" fill="var(--color-surf)" />
     </svg>
   );
 }
