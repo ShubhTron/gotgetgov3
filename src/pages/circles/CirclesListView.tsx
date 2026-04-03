@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, IconSearch, IconPencil } from '../../design-system';
 import { StoriesStrip } from '../../components/circles/StoriesStrip';
 import { ConversationRow } from '../../components/circles/ConversationRow';
+import { ComposeMenu } from '../../components/messaging/ComposeMenu';
+import { CreateGroupModal } from '../../components/messaging/CreateGroupModal';
+import { CreateBroadcastModal } from '../../components/messaging/CreateBroadcastModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
 import { supabase } from '../../lib/supabase';
@@ -32,7 +35,10 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
   const { tutorialStep } = useGuestTutorial();
   const [activeTab, setActiveTab] = useState<CirclesTab>('dms');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showComposeMenu, setShowComposeMenu] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showCreateBroadcast, setShowCreateBroadcast] = useState(false);
   const [allContacts, setAllContacts] = useState<Profile[]>([]);
 
   // ── ID-based search state ────────────────────────────────────────────────
@@ -184,7 +190,7 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
           {/* New Chat button */}
           <button
             aria-label="New message"
-            onClick={() => setNewChatOpen(true)}
+            onClick={() => setShowComposeMenu(true)}
             style={{
               width: 36,
               height: 36,
@@ -397,6 +403,49 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
           onSelect={(contactId, contactProfile) => {
             setNewChatOpen(false);
             onNewChat(contactId, contactProfile);
+          }}
+        />
+      )}
+
+      {/* ── Compose Menu ──────────────────────────────────────────────── */}
+      <ComposeMenu
+        open={showComposeMenu}
+        onClose={() => setShowComposeMenu(false)}
+        onNewChat={() => {
+          setNewChatOpen(true);
+          setActiveTab('dms');
+        }}
+        onNewGroup={() => {
+          setShowCreateGroup(true);
+          setActiveTab('groups');
+        }}
+        onNewBroadcast={() => {
+          setShowCreateBroadcast(true);
+          setActiveTab('broadcast');
+        }}
+      />
+
+      {/* ── Create Group Modal ──────────────────────────────────────────────── */}
+      {profile && (
+        <CreateGroupModal
+          open={showCreateGroup}
+          onOpenChange={setShowCreateGroup}
+          onGroupCreated={(conversationId) => {
+            // Handle group created - could navigate to it or refresh list
+            console.log('Group created:', conversationId);
+          }}
+        />
+      )}
+
+      {/* ── Create Broadcast Modal ──────────────────────────────────────────────── */}
+      {profile && (
+        <CreateBroadcastModal
+          open={showCreateBroadcast}
+          onOpenChange={setShowCreateBroadcast}
+          userId={profile.id}
+          onChannelCreated={(conversationId) => {
+            // Handle broadcast created - could navigate to it or refresh list
+            console.log('Broadcast created:', conversationId);
           }}
         />
       )}

@@ -17,6 +17,7 @@ import type { ConversationItem, MessageWithSender, MatchProposalPayload, Attachm
 import { MATCH_PROPOSAL_PREFIX, ATTACHMENT_PREFIX } from '../../types/circles';
 import { uploadAttachment } from '../../lib/attachments';
 import type { PendingAttachment } from '../../components/circles/MessageComposer';
+import { supabase } from '../../lib/supabase';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,7 +106,38 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
 
   const otherProfile = conversationItem.otherParticipants[0]?.profile ?? null;
   const otherUserId = otherProfile?.id ?? '';
-  const online = isDemo ? true : (otherProfile ? isOnlineNow(otherProfile.last_seen) : false);
+
+  // Live last_seen — starts from the fetched profile, updated via realtime
+  const [otherLastSeen, setOtherLastSeen] = useState<string | null>(otherProfile?.last_seen ?? null);
+
+  useEffect(() => {
+    setOtherLastSeen(otherProfile?.last_seen ?? null);
+  }, [otherProfile?.last_seen]);
+
+  useEffect(() => {
+    if (isDemo || !otherUserId) return;
+    const channel = supabase
+      .channel(`profile-status-${otherUserId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${otherUserId}` },
+        (payload) => {
+          const updated = payload.new as { last_seen?: string | null };
+          if (updated.last_seen !== undefined) setOtherLastSeen(updated.last_seen ?? null);
+        }
+      )
+      .subscribe();
+    return () => { channel.unsubscribe(); };
+  }, [otherUserId, isDemo]);
+
+  // Re-compute online status every minute so the label stays accurate
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => forceRender(n => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const online = isDemo ? true : isOnlineNow(otherLastSeen);
 
   // Mark messages as read when entering the chat (skip for demo)
   useEffect(() => {
@@ -297,7 +329,7 @@ export function ChatDetailView({ conversationItem, onBack, markAsRead }: ChatDet
                 letterSpacing: online ? '0.06em' : 0,
               }}
             >
-              {online ? 'Online' : formatLastSeen(otherProfile?.last_seen ?? null)}
+              {online ? 'Online' : formatLastSeen(otherLastSeen)}
             </p>
           </div>
         </div>

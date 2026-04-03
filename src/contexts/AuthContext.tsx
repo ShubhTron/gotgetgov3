@@ -22,6 +22,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export { AuthContext };
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -82,6 +84,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Heartbeat: keep last_seen fresh every 2 minutes while logged in
+  useEffect(() => {
+    if (!user) return;
+    const tick = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from('profiles') as any)
+        .update({ last_seen: new Date().toISOString() })
+        .eq('id', user.id)
+        .then(() => {});
+    };
+    const interval = setInterval(tick, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   async function fetchProfile(userId: string) {
     const { data, error } = await supabase

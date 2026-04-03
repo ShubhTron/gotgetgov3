@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Minus, ChevronRight, X } from 'lucide-react';
 import { getInitials } from '@/lib/avatar-utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { SPORTS, type SportType, type PendingScoreMatch } from '@/types';
 import { formatDate } from '@/lib/utils';
-import { SPORT_SCORING, fetchPendingScoreMatches, submitMatchResult } from '@/lib/scoring';
+import { SPORT_SCORING, SPORT_FORMAT_CONFIG, SPORT_SCORING_NOTES, fetchPendingScoreMatches, submitMatchResult } from '@/lib/scoring';
 
 interface ScoreMatchModalProps {
   open: boolean;
@@ -114,6 +114,7 @@ export function ScoreMatchModal({ open, onOpenChange, onScored, preselectedMatch
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [activePendingMatch, setActivePendingMatch] = useState<PendingScoreMatch | null>(null);
+  const isApplyingPendingMatch = useRef(false);
 
   const scoring = SPORT_SCORING[sport] || SPORT_SCORING.tennis;
 
@@ -136,9 +137,18 @@ export function ScoreMatchModal({ open, onOpenChange, onScored, preselectedMatch
   }, [open, user]);
 
   useEffect(() => { if (!open) resetForm(); }, [open]);
-  useEffect(() => { setSets([{ team1: 0, team2: 0 }]); }, [sport]);
+  useEffect(() => {
+    if (isApplyingPendingMatch.current) {
+      isApplyingPendingMatch.current = false;
+      return;
+    }
+    const config = SPORT_FORMAT_CONFIG[sport];
+    if (config) setFormat(config.defaultFormat);
+    setSets([{ team1: 0, team2: 0 }]);
+  }, [sport]);
 
   function applyPendingMatch(match: PendingScoreMatch) {
+    isApplyingPendingMatch.current = true;
     setActivePendingMatch(match);
     setSport(match.sport);
     setFormat(match.format);
@@ -339,27 +349,45 @@ export function ScoreMatchModal({ open, onOpenChange, onScored, preselectedMatch
               {/* Format */}
               <div>
                 <label style={labelStyle}>Format</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {(['singles', 'doubles'] as const).map((f) => {
-                    const active = format === f;
-                    return (
-                      <button
-                        key={f}
-                        onClick={() => setFormat(f)}
-                        style={{
-                          flex: 1, height: 44, borderRadius: 12,
-                          border: active ? 'none' : '1px solid var(--color-bdr)',
-                          background: active ? 'var(--color-acc)' : 'var(--color-surf-2)',
-                          color: active ? '#fff' : 'var(--color-t2)',
-                          fontFamily: 'var(--font-body)', fontWeight: 700,
-                          fontSize: 14, cursor: 'pointer', textTransform: 'capitalize',
-                        }}
-                      >
-                        {f}
-                      </button>
-                    );
-                  })}
-                </div>
+                {SPORT_FORMAT_CONFIG[sport]?.doublesOnly ? (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      disabled
+                      style={{
+                        flex: 1, height: 44, borderRadius: 12,
+                        border: 'none',
+                        background: 'var(--color-acc)',
+                        color: '#fff',
+                        fontFamily: 'var(--font-body)', fontWeight: 700,
+                        fontSize: 14, cursor: 'default', opacity: 0.85,
+                      }}
+                    >
+                      Doubles Only
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['singles', 'doubles'] as const).map((f) => {
+                      const active = format === f;
+                      return (
+                        <button
+                          key={f}
+                          onClick={() => setFormat(f)}
+                          style={{
+                            flex: 1, height: 44, borderRadius: 12,
+                            border: active ? 'none' : '1px solid var(--color-bdr)',
+                            background: active ? 'var(--color-acc)' : 'var(--color-surf-2)',
+                            color: active ? '#fff' : 'var(--color-t2)',
+                            fontFamily: 'var(--font-body)', fontWeight: 700,
+                            fontSize: 14, cursor: 'pointer', textTransform: 'capitalize',
+                          }}
+                        >
+                          {f}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Opponent */}
@@ -428,6 +456,18 @@ export function ScoreMatchModal({ open, onOpenChange, onScored, preselectedMatch
                   {format === 'doubles' ? 'Opponents' : opponent?.name}
                 </span>
               </div>
+
+              {/* Scoring hint */}
+              {SPORT_SCORING_NOTES[sport] && (
+                <p style={{
+                  fontFamily: 'var(--font-body)', fontSize: 12,
+                  color: 'var(--color-t3)', textAlign: 'center',
+                  margin: 0, padding: '6px 10px',
+                  background: 'var(--color-surf-2)', borderRadius: 8,
+                }}>
+                  {SPORT_SCORING_NOTES[sport]}
+                </p>
+              )}
 
               {/* Set rows */}
               {sets.map((set, index) => (

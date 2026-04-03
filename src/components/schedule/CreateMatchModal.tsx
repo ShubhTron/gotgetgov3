@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SPORTS, type SportType } from '@/types';
 import { cn } from '@/lib/utils';
+import { SPORT_FORMAT_CONFIG } from '@/lib/scoring';
 
 interface Player {
   id: string;
@@ -84,9 +85,9 @@ export function CreateMatchModal({
   }, [preselectedOpponent]);
 
   useEffect(() => {
-    if (selectedSport === 'padel' || selectedSport === 'pickleball') {
-      setMatchType('doubles');
-    }
+    if (!selectedSport) return;
+    const config = SPORT_FORMAT_CONFIG[selectedSport];
+    if (config) setMatchType(config.defaultFormat);
   }, [selectedSport]);
 
   const fetchUserData = async () => {
@@ -473,30 +474,42 @@ export function CreateMatchModal({
               >
                 Match Type *
               </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setMatchType('singles')}
-                  className="flex-1 py-3 rounded-[8px] text-label font-medium transition-colors"
-                  style={
-                    matchType === 'singles'
-                      ? { background: 'var(--color-acc)', color: '#fff' }
-                      : { background: 'var(--color-surf-2)', color: 'var(--color-t2)' }
-                  }
-                >
-                  Singles
-                </button>
-                <button
-                  onClick={() => setMatchType('doubles')}
-                  className="flex-1 py-3 rounded-[8px] text-label font-medium transition-colors"
-                  style={
-                    matchType === 'doubles'
-                      ? { background: 'var(--color-acc)', color: '#fff' }
-                      : { background: 'var(--color-surf-2)', color: 'var(--color-t2)' }
-                  }
-                >
-                  Doubles
-                </button>
-              </div>
+              {selectedSport && SPORT_FORMAT_CONFIG[selectedSport]?.doublesOnly ? (
+                <div className="flex gap-2">
+                  <button
+                    disabled
+                    className="flex-1 py-3 rounded-[8px] text-label font-medium"
+                    style={{ background: 'var(--color-acc)', color: '#fff', opacity: 0.85, cursor: 'default' }}
+                  >
+                    Doubles Only
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setMatchType('singles')}
+                    className="flex-1 py-3 rounded-[8px] text-label font-medium transition-colors"
+                    style={
+                      matchType === 'singles'
+                        ? { background: 'var(--color-acc)', color: '#fff' }
+                        : { background: 'var(--color-surf-2)', color: 'var(--color-t2)' }
+                    }
+                  >
+                    Singles
+                  </button>
+                  <button
+                    onClick={() => setMatchType('doubles')}
+                    className="flex-1 py-3 rounded-[8px] text-label font-medium transition-colors"
+                    style={
+                      matchType === 'doubles'
+                        ? { background: 'var(--color-acc)', color: '#fff' }
+                        : { background: 'var(--color-surf-2)', color: 'var(--color-t2)' }
+                    }
+                  >
+                    Doubles
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SPORTS, type SportType } from '@/types';
+import { SPORT_FORMAT_CONFIG } from '@/lib/scoring';
 import { getInitials } from '@/lib/avatar-utils';
 
 interface Player {
@@ -70,9 +71,9 @@ export function CreateMatchPage() {
   }, [location.state]);
 
   useEffect(() => {
-    if (selectedSport === 'padel' || selectedSport === 'pickleball') {
-      setMatchType('doubles');
-    }
+    if (!selectedSport) return;
+    const config = SPORT_FORMAT_CONFIG[selectedSport];
+    if (config) setMatchType(config.defaultFormat);
   }, [selectedSport]);
 
   const fetchUserData = async () => {
@@ -374,10 +375,16 @@ export function CreateMatchPage() {
         {/* Match Type */}
         <div>
           <label style={fieldLabel}>Match Type *</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setMatchType('singles')} style={pill(matchType === 'singles')}>Singles</button>
-            <button onClick={() => setMatchType('doubles')} style={pill(matchType === 'doubles')}>Doubles</button>
-          </div>
+          {selectedSport && SPORT_FORMAT_CONFIG[selectedSport]?.doublesOnly ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button disabled style={{ ...pill(true), cursor: 'default', opacity: 0.85 }}>Doubles Only</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setMatchType('singles')} style={pill(matchType === 'singles')}>Singles</button>
+              <button onClick={() => setMatchType('doubles')} style={pill(matchType === 'doubles')}>Doubles</button>
+            </div>
+          )}
         </div>
 
         {/* Partner (doubles) */}

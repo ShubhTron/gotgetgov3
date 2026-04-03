@@ -270,7 +270,6 @@ describe('Theme Integration Tests', () => {
     it('should handle missing matchMedia API', () => {
       // Remove matchMedia
       const originalMatchMedia = window.matchMedia;
-      // @ts-expect-error - Testing missing API
       delete window.matchMedia;
       
       const { result } = renderHook(() => useSystemTheme());

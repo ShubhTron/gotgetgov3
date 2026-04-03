@@ -11,12 +11,7 @@ const SPORT_EMOJI: Record<string, string> = {
   tennis: '🎾',
   squash: '🟡',
   pickleball: '🏸',
-  golf: '⛳',
-  badminton: '🏸',
-  table_tennis: '🏓',
-  racquetball_squash57: '🎾',
   beach_tennis: '🏖️',
-  real_tennis: '🎾',
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────

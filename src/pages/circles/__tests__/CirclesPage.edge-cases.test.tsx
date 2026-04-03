@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import '@testing-library/jest-dom/vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { CirclesPage } from '../CirclesPage';
 import { AuthContext } from '../../../contexts/AuthContext';
@@ -77,7 +78,7 @@ const mockValidFeedData: FeedData = {
       competition_fixture_id: null,
       scheduled_at: null,
       played_at: new Date().toISOString(),
-      score: '6-4, 6-3',
+      score: { sets: [{ team1: 6, team2: 4 }, { team1: 6, team2: 3 }] },
       score_status: 'confirmed',
       score_submitted_by: 'test-user-id',
       score_confirmed_by: null,
@@ -89,9 +90,23 @@ const mockValidFeedData: FeedData = {
     },
     opponent: {
       id: 'opponent-1',
+      email: 'opponent@example.com',
       full_name: 'Opponent User',
       avatar_url: null,
+      bio: '',
+      phone: null,
+      location_lat: 0,
+      location_lng: 0,
       location_city: 'Test City',
+      location_country: 'USA',
+      home_club_id: null,
+      onboarding_completed: true,
+      dark_mode: false,
+      push_notifications: true,
+      email_notifications: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
     },
     club: null,
     eloChange: 14,
@@ -135,8 +150,15 @@ function TestWrapper({ children, user = mockUser, profile = mockProfile }: any) 
           <GuestTutorialContext.Provider
             value={{
               tutorialStep: null,
+              tutorialMessages: [],
+              isTutorialActive: false,
+              startTutorial: vi.fn(),
               advanceTutorial: vi.fn(),
               resetTutorial: vi.fn(),
+              skipTutorial: vi.fn(),
+              addUserMessage: vi.fn(),
+              registerTarget: vi.fn(),
+              targetElements: {},
             }}
           >
             {children}

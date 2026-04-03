@@ -18,6 +18,8 @@ import { ChatView } from './ChatView';
 import { CreateGroupModal } from './CreateGroupModal';
 import { CreateBroadcastModal } from './CreateBroadcastModal';
 import { ContactsStrip } from './ContactsStrip';
+import { ComposeMenu } from './ComposeMenu';
+import { NewChatModal } from './NewChatModal';
 import { getInitials } from '@/lib/avatar-utils';
 import { cn } from '@/lib/utils';
 
@@ -224,6 +226,8 @@ export function ConversationList() {
   const [conversations, setConversations] = useState<ConversationWithMeta[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationWithMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showComposeMenu, setShowComposeMenu] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreateBroadcast, setShowCreateBroadcast] = useState(false);
   const [activeTab, setActiveTab] = useState<'direct' | 'group' | 'broadcast'>('direct');
@@ -418,7 +422,7 @@ export function ConversationList() {
             </p>
           </div>
           <button
-            onClick={() => setShowCreateGroup(true)}
+            onClick={() => setShowComposeMenu(true)}
             className="w-9 h-9 rounded-full flex items-center justify-center"
             style={{ background: 'var(--color-surf-2)' }}
           >
@@ -690,6 +694,20 @@ export function ConversationList() {
           </div>
         )}
       </div>
+
+      <ComposeMenu
+        open={showComposeMenu}
+        onClose={() => setShowComposeMenu(false)}
+        onNewChat={() => setShowNewChat(true)}
+        onNewGroup={() => setShowCreateGroup(true)}
+        onNewBroadcast={() => setShowCreateBroadcast(true)}
+      />
+
+      <NewChatModal
+        open={showNewChat}
+        onOpenChange={setShowNewChat}
+        onSelectUser={handleOpenUserConversation}
+      />
 
       <CreateGroupModal
         open={showCreateGroup}

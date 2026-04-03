@@ -62,9 +62,9 @@ const golfTournament: FeedTournament = {
     ...sampleTournament.competition,
     id: '2',
     name: 'City Golf Open',
-    sport: 'golf',
+    sport: 'tennis',
     format: 'singles',
-    competition_format: 'stroke_play' as any, // Golf uses different format
+    competition_format: 'single_elimination',
     start_date: '2024-04-05T08:00:00Z',
     end_date: '2024-04-05T17:00:00Z',
     max_participants: 64,
@@ -74,7 +74,7 @@ const golfTournament: FeedTournament = {
   club: {
     ...sampleTournament.club,
     name: 'Lakeside Golf Course',
-    sports: ['golf'],
+    sports: ['tennis'],
   },
   spotsLeft: 15,
 };

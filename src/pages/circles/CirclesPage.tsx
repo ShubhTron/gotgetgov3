@@ -133,15 +133,18 @@ const viewTransitionConfig = {
  * can animate them simultaneously during the slide transition.
  */
 export function CirclesPage() {
+  const location = useLocation();
+  const targetConversationId = (location.state as { openConversationId?: string } | null)?.openConversationId;
+  
   const [screen, setScreen] = useState<CirclesScreen>({ view: 'list' });
   const { conversations, loading, error, markAsRead, refetch } = useConversations();
   const { user, isGuest } = useAuth();
   const { tutorialStep, advanceTutorial } = useGuestTutorial();
-  const location = useLocation();
   const { setHideNav } = useNavVisibility();
 
   // New state for segmented control and feed data
-  const [activeSegment, setActiveSegment] = useState<CirclesSegment>('MATCHES');
+  // If we have a target conversation, start on CIRCLES segment to avoid showing MATCHES first
+  const [activeSegment, setActiveSegment] = useState<CirclesSegment>(targetConversationId ? 'CIRCLES' : 'MATCHES');
   const [feedData, setFeedData] = useState<FeedData>({
     heroMatch: null,
     challenges: [],
@@ -163,6 +166,9 @@ export function CirclesPage() {
   // Scroll container refs for both views
   const matchesScrollRef = useRef<HTMLDivElement>(null);
   const circlesScrollRef = useRef<HTMLDivElement>(null);
+  
+  // Track if we've already auto-opened a conversation from location state
+  const hasAutoOpenedRef = useRef(false);
 
   const openChat = useCallback((item: ConversationItem) => {
     setScreen({ view: 'chat', item });
@@ -285,16 +291,19 @@ export function CirclesPage() {
     }
   }, [tutorialStep, screen.view, isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-open a conversation when navigated from invite acceptance
+  // Auto-open a conversation when navigated from invite acceptance or notification
   useEffect(() => {
     const targetId = (location.state as { openConversationId?: string } | null)?.openConversationId;
-    if (!targetId || loading || screen.view === 'chat') return;
+    if (!targetId || loading || hasAutoOpenedRef.current) return;
     const item = conversations.find(c => c.conversation.id === targetId);
     if (item) {
-      openChat(item);
+      // Open chat immediately without animation delay
+      setScreen({ view: 'chat', item });
+      setHideNav(true);
+      hasAutoOpenedRef.current = true;
       window.history.replaceState({}, '', '/circles');
     }
-  }, [conversations, loading, location.state]);
+  }, [conversations, loading, location.state, setHideNav]);
 
   /**
    * Fetch all feed data in parallel for the MATCHES view

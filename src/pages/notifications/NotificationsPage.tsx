@@ -254,14 +254,14 @@ function ConnectionRequestCard({ n, onAccept, onReject, loading }: {
   );
 }
 
-function ConnectionAcceptedCard({ n, navigate }: { n: Notification; navigate: (path: string) => void }) {
+function ConnectionAcceptedCard({ n, navigate }: { n: Notification; navigate: ReturnType<typeof useNavigate> }) {
   const data = n.data as { acceptorName?: string; acceptorAvatarUrl?: string | null; conversation_id?: string };
   const name = data.acceptorName ?? 'Someone';
   const { user } = useAuth();
 
   async function sendMessage() {
     if (!data.conversation_id || !user) return;
-    navigate('/circles');
+    navigate('/circles', { state: { openConversationId: data.conversation_id } });
   }
 
   return (
@@ -588,7 +588,7 @@ export function NotificationsPage() {
 
   function renderCard(n: Notification) {
     if (n.type === 'swipe_right_received') {
-      return <SwipeRightCard key={n.id} n={n} currentUserId={user!.id} onAccepted={fetchNotifications} onRejected={(id) => setNotifications((p) => p.filter((x) => x.id !== id))} />;
+      return <InteractiveSwipeNotification key={n.id} notification={n} currentUserId={user!.id} onAccepted={fetchNotifications} onRejected={(id) => setNotifications((p) => p.filter((x) => x.id !== id))} />;
     }
     if (n.type === 'connection_request_received') {
       return <ConnectionRequestCard key={n.id} n={n} loading={actionLoading === n.id} onAccept={() => handleAccept(n)} onReject={() => handleReject(n)} />;

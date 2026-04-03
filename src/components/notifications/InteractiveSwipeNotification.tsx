@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, X, User, MessageCircle } from 'lucide-react';
+import { Heart, MessageCircle } from 'lucide-react';
 import type { Notification } from '@/types/database';
 import type { SwipeRightNotificationData } from '@/types/swipeNotifications';
 import { acceptConnectionFromNotification, rejectConnectionFromNotification } from '@/lib/notifications';
+import { supabase } from '@/lib/supabase';
 
 interface InteractiveSwipeNotificationProps {
   notification: Notification;
@@ -24,6 +25,8 @@ export function InteractiveSwipeNotification({
   const [conversationId, setConversationId] = useState(data.conversation_id ?? null);
   const [loading, setLoading] = useState<'accept' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [swiperName, setSwiperName] = useState(data.senderName ?? 'Someone');
+  const [swiperAvatar, setSwiperAvatar] = useState(data.senderAvatarUrl);
 
   useEffect(() => {
     const currentState = data.connection_state ?? 'pending';
@@ -35,8 +38,26 @@ export function InteractiveSwipeNotification({
     }
   }, [data.connection_state, data.conversation_id, notification.id, onRejected]);
 
+  // Fetch swiper's profile if name is not available
+  useEffect(() => {
+    async function fetchSwiperProfile() {
+      if (data.senderName || !data.swiper_id) return;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', data.swiper_id)
+        .single();
+      
+      if (profile) {
+        setSwiperName(profile.full_name ?? 'Someone');
+        setSwiperAvatar(profile.avatar_url);
+      }
+    }
+    fetchSwiperProfile();
+  }, [data.senderName, data.swiper_id]);
+
   const isUnread = !notification.read;
-  const accentColor = '#FF6B35';
 
   const handleAccept = async () => {
     setLoading('accept');
@@ -76,7 +97,11 @@ export function InteractiveSwipeNotification({
   };
 
   const handleViewProfile = () => navigate(`/profile/${data.swiper_id}`);
-  const handleSendMessage = () => { if (conversationId) navigate(`/chat/${conversationId}`); };
+  const handleSendMessage = () => { 
+    if (conversationId) {
+      navigate('/circles', { state: { openConversationId: conversationId } });
+    }
+  };
 
   if (connectionState === 'rejected') return null;
 
@@ -85,36 +110,38 @@ export function InteractiveSwipeNotification({
       style={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 16,
-        padding: 24,
+        gap: 12,
+        padding: '14px 14px 14px 14px',
         borderRadius: 16,
         background: 'var(--color-surf)',
-        border: `1px solid ${isUnread ? accentColor + '40' : 'var(--color-bdr)'}`,
-        borderLeft: `3px solid ${isUnread ? accentColor : 'var(--color-bdr)'}`,
+        border: `1px solid var(--color-bdr)`,
         position: 'relative',
       }}
     >
       <div style={{
-        width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-        background: accentColor + '20', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 46, height: 46, borderRadius: 14, flexShrink: 0,
+        background: 'rgba(255,59,80,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <Heart size={18} color={accentColor} />
+        <Heart size={20} color="#FF3B50" fill="#FF3B50" />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-t1)', margin: '0 0 2px' }}>
-          <span style={{ fontWeight: 600 }}>{notification.title}</span>
-        </p>
-        {notification.body && (
-          <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-t2)', margin: '0 0 2px' }}>
-            {notification.body}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 2 }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-t2)', margin: 0, lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 700, color: 'var(--color-t1)' }}>{swiperName}</span> swiped right on you
           </p>
-        )}
-        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-t3)', margin: '0 0 10px' }}>
-          {formatTime(notification.created_at)}
+          <span style={{
+            fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-t3)',
+            textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600,
+          }}>
+            {formatTime(notification.created_at)}
+          </span>
+        </div>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t3)', margin: '2px 0 10px' }}>
+          {notification.body ?? 'Interested in playing'}
         </p>
         {error && (
-          <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-red)', margin: '0 0 8px' }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-red)', margin: '0 0 8px' }}>
             {error}
           </p>
         )}
@@ -126,14 +153,13 @@ export function InteractiveSwipeNotification({
               disabled={loading !== null}
               aria-label="Accept connection"
               style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '6px 16px', background: 'var(--color-acc)', color: 'var(--color-bg)',
-                border: 'none', borderRadius: 24, fontFamily: 'var(--font-body)',
-                fontWeight: 600, cursor: loading !== null ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '8px 16px', background: 'var(--color-acc)', color: '#fff',
+                border: 'none', borderRadius: 999, fontFamily: 'var(--font-body)',
+                fontWeight: 700, fontSize: 13, cursor: loading !== null ? 'not-allowed' : 'pointer',
                 opacity: loading !== null ? 0.6 : 1, transition: 'opacity 0.15s',
               }}
             >
-              <Heart size={14} />
               {loading === 'accept' ? 'Accepting…' : 'Accept'}
             </button>
 
@@ -142,58 +168,45 @@ export function InteractiveSwipeNotification({
               disabled={loading !== null}
               aria-label="Reject connection"
               style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '6px 16px', background: 'rgba(255,59,48,0.12)',
-                color: 'var(--color-red)', border: '1px solid rgba(255,59,48,0.3)',
-                borderRadius: 24, fontFamily: 'var(--font-body)', fontWeight: 600,
-                cursor: loading !== null ? 'not-allowed' : 'pointer',
-                opacity: loading !== null ? 0.6 : 1, transition: 'opacity 0.15s',
-              }}
-            >
-              <X size={14} />
-              {loading === 'reject' ? 'Rejecting…' : 'Reject'}
-            </button>
-
-            <button
-              onClick={handleViewProfile}
-              disabled={loading !== null}
-              aria-label="View swiper profile"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '6px 16px', background: 'var(--color-surf-2)',
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '8px 16px', background: 'var(--color-surf-2)',
                 color: 'var(--color-t2)', border: '1px solid var(--color-bdr)',
-                borderRadius: 24, fontFamily: 'var(--font-body)', fontWeight: 600,
+                borderRadius: 999, fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13,
                 cursor: loading !== null ? 'not-allowed' : 'pointer',
                 opacity: loading !== null ? 0.6 : 1, transition: 'opacity 0.15s',
               }}
             >
-              <User size={14} />
-              View Profile
+              {loading === 'reject' ? 'Rejecting…' : 'Reject'}
             </button>
           </div>
         )}
 
         {connectionState === 'accepted' && (
-          <button
-            onClick={handleSendMessage}
-            disabled={!conversationId}
-            aria-label="Send message"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '6px 16px', background: 'var(--color-acc)', color: 'var(--color-bg)',
-              border: 'none', borderRadius: 24, fontFamily: 'var(--font-body)', fontWeight: 600,
-              cursor: conversationId ? 'pointer' : 'not-allowed',
-              opacity: conversationId ? 1 : 0.6, transition: 'opacity 0.15s',
-            }}
-          >
-            <MessageCircle size={14} />
-            Send Message
-          </button>
+          <div>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-acc)', fontWeight: 600, margin: '0 0 10px' }}>
+              ✅ Connected! You can now message {swiperName}.
+            </p>
+            <button
+              onClick={handleSendMessage}
+              disabled={!conversationId}
+              aria-label="Send message"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', background: 'var(--color-acc)', color: '#fff',
+                border: 'none', borderRadius: 999, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13,
+                cursor: conversationId ? 'pointer' : 'not-allowed',
+                opacity: conversationId ? 1 : 0.6, transition: 'opacity 0.15s',
+              }}
+            >
+              <MessageCircle size={14} />
+              Send Message
+            </button>
+          </div>
         )}
       </div>
 
       {isUnread && (
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0, marginTop: 6 }} />
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-red)', flexShrink: 0, marginTop: 4 }} />
       )}
     </div>
   );

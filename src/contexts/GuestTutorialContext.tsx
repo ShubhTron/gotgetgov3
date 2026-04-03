@@ -37,6 +37,8 @@ export interface GuestTutorialContextType {
 
 const GuestTutorialContext = createContext<GuestTutorialContextType | null>(null);
 
+export { GuestTutorialContext };
+
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
 const SKIP_KEY = 'gg-tutorial-skipped';

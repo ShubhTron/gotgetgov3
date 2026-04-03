@@ -281,31 +281,6 @@ export const MatchesView = forwardRef<HTMLDivElement, MatchesViewProps>(
     );
   }
 
-  // Show loading skeleton
-  if (loading && !feedData.heroMatch && feedData.challenges.length === 0) {
-    return (
-      <div
-        ref={scrollContainerRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          padding: '0 16px 80px',
-          background: 'var(--color-bg)',
-          opacity: 1,
-          transition: 'opacity 0.3s ease-in-out',
-        }}
-        data-view="matches"
-      >
-        <HeroSectionSkeleton />
-        <ChallengesSectionSkeleton />
-        <OpenMatchesSectionSkeleton />
-        <DigestSectionSkeleton />
-        <TournamentsSectionSkeleton />
-      </div>
-    );
-  }
-
   // Edge Case 2: Check if all sections are empty (null/empty feedData)
   const hasNoData =
     !feedData.heroMatch &&
@@ -346,8 +321,6 @@ export const MatchesView = forwardRef<HTMLDivElement, MatchesViewProps>(
         scrollbarWidth: 'none',
         padding: '0 16px 80px',
         background: 'var(--color-bg)',
-        opacity: loading ? 0.7 : 1,
-        transition: 'opacity 0.3s ease-in-out',
       }}
       data-view="matches"
       data-testid="matches-view"

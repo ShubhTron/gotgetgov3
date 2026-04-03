@@ -55,7 +55,7 @@ const golfMatch: FeedOpenMatch = {
   ...sampleOpenMatch,
   challenge: {
     ...sampleOpenMatch.challenge,
-    sport: 'golf',
+    sport: 'tennis',
     confirmed_time: '2024-01-21T09:00:00Z',
     location: 'Riverside Golf Club',
   },

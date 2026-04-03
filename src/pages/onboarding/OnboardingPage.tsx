@@ -14,7 +14,6 @@ type Step =
   | 'profile'
   | 'location_club'
   | 'coach_sports'
-  | 'coach_specialties'
   | 'coach_lessons'
   | 'sports'
   | 'skill'
@@ -24,7 +23,7 @@ type Step =
 export function buildSteps(roles: ClubRole[]): Step[] {
   const steps: Step[] = ['roles', 'profile', 'location_club'];
   if (roles.includes('coach')) {
-    steps.push('coach_sports', 'coach_specialties', 'coach_lessons');
+    steps.push('coach_sports', 'coach_lessons');
   }
   if (roles.includes('player')) {
     steps.push('sports');
@@ -41,7 +40,6 @@ const STEP_TITLES: Record<Step, string> = {
   profile: 'Set up your profile',
   location_club: 'Find your club',
   coach_sports: 'What sports do you coach?',
-  coach_specialties: 'What are your specialties?',
   coach_lessons: 'Your lesson packages',
   sports: 'What sports do you play?',
   skill: "What's your skill level?",
@@ -54,7 +52,6 @@ const STEP_DESCRIPTIONS: Record<Step, string> = {
   profile: 'This is how other players will see you.',
   location_club: 'Find and join your home club.',
   coach_sports: 'Select the sports you coach or teach.',
-  coach_specialties: 'Choose your coaching specialties for each sport.',
   coach_lessons: 'Set up your lesson packages and pricing.',
   sports: "Select all the sports you're interested in.",
   skill: 'This helps us match you with similar players.',
@@ -71,7 +68,6 @@ const STEP_LABELS: Record<Step, string> = {
   availability:      'AVAILABILITY',
   bio:               'ABOUT YOU',
   coach_sports:      'COACHING',
-  coach_specialties: 'SPECIALTIES',
   coach_lessons:     'LESSON PACKAGES',
 };
 
@@ -119,27 +115,7 @@ const SPORT_IMAGES: Record<string, string> = {
   tennis: 'https://images.pexels.com/photos/209977/pexels-photo-209977.jpeg?auto=compress&cs=tinysrgb&w=400',
   squash: 'https://images.pexels.com/photos/7648097/pexels-photo-7648097.jpeg?auto=compress&cs=tinysrgb&w=400',
   pickleball: 'https://images.pexels.com/photos/8224681/pexels-photo-8224681.jpeg?auto=compress&cs=tinysrgb&w=400',
-  badminton: 'https://images.pexels.com/photos/3660204/pexels-photo-3660204.jpeg?auto=compress&cs=tinysrgb&w=400',
-  golf: 'https://images.pexels.com/photos/1325681/pexels-photo-1325681.jpeg?auto=compress&cs=tinysrgb&w=400',
-  table_tennis: 'https://images.pexels.com/photos/976873/pexels-photo-976873.jpeg?auto=compress&cs=tinysrgb&w=400',
-  racquetball: 'https://images.pexels.com/photos/7648298/pexels-photo-7648298.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'racquetball/squash_57': '/squash57-137.jpg',
   beach_tennis: 'https://images.pexels.com/photos/1263426/pexels-photo-1263426.jpeg?auto=compress&cs=tinysrgb&w=400',
-  real_tennis: 'https://images.pexels.com/photos/5741289/pexels-photo-5741289.jpeg?auto=compress&cs=tinysrgb&w=400',
-};
-
-export const COACH_SPECIALTIES: Partial<Record<SportType, string[]>> = {
-  tennis:          ['Serve technique', 'Footwork', 'Match strategy', 'Doubles tactics', 'Mental game'],
-  padel:           ['Wall play', 'Bandeja', 'Víbora', 'Positioning', 'Smash'],
-  platform_tennis: ['Screening', 'Wire play', 'Overhead', 'Doubles strategy', 'Lob defense'],
-  pickleball:      ['Dinking', 'Third shot drop', 'Stacking', 'Kitchen play', 'Erne'],
-  squash:          ['Ghosting', 'Drop shot', 'Boast', 'Court movement', 'Serve variation'],
-  badminton:       ['Smash', 'Net play', 'Footwork', 'Doubles rotation', 'Clear'],
-  golf:            ['Driving', 'Short game', 'Putting', 'Course management', 'Bunker play'],
-  table_tennis:    ['Topspin', 'Backhand loop', 'Serve & receive', 'Footwork', 'Blocking'],
-  beach_tennis:    ['Overhead', 'Lob', 'Positioning', 'Serve', 'Volley'],
-  real_tennis:     ['Chase play', 'Hazard side', 'Service', 'Grille', 'Dedans'],
-  racquetball_squash57: ['Power serve', 'Kill shot', 'Ceiling ball', 'Pinch shot', 'Z-ball'],
 };
 
 interface AvailabilityEntry {
@@ -785,7 +761,6 @@ export function OnboardingPage() {
                   {step === 'roles' && <RolesStep data={data} setData={setData} />}
                   {step === 'location_club' && <LocationClubStep data={data} setData={setData} user={user} />}
                   {step === 'coach_sports' && <CoachSportsStep data={data} setData={setData} user={user} />}
-                  {step === 'coach_specialties' && <CoachSpecialtiesStep data={data} setData={setData} />}
                   {step === 'coach_lessons' && <CoachLessonsStep data={data} setData={setData} />}
                   {step === 'sports' && <SportsStep data={data} setData={setData} />}
                   {step === 'skill' && <SkillStep data={data} setData={setData} />}
@@ -900,15 +875,16 @@ function SuccessModal() {
             border: '1px solid rgba(22,212,106,0.25)',
           }}
         />
-        {/* Check circle */}
+        {/* Check circle — outlined style matching reference */}
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.1, duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
           style={{
             width: 88, height: 88, borderRadius: '50%',
-            background: 'var(--color-acc)',
-            boxShadow: '0 0 0 1px rgba(22,212,106,0.5), 0 0 60px rgba(22,212,106,0.45)',
+            background: 'transparent',
+            border: '2.5px solid var(--color-acc)',
+            boxShadow: '0 0 40px rgba(22,212,106,0.35)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
@@ -917,7 +893,7 @@ function SuccessModal() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
           >
-            <Check size={38} color="var(--color-bg)" strokeWidth={2.5} />
+            <Check size={38} color="var(--color-acc)" strokeWidth={2.5} />
           </motion.div>
         </motion.div>
 
@@ -1044,7 +1020,6 @@ const SportIcon = ({ sport, color }: { sport: string; color: string }) => {
   switch (sport) {
     case 'platform_tennis':
     case 'tennis':
-    case 'real_tennis':
     case 'beach_tennis':
       return (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -1081,32 +1056,6 @@ const SportIcon = ({ sport, color }: { sport: string; color: string }) => {
           <circle cx="10" cy="9" r="1" fill={color} stroke="none"/>
           <circle cx="11" cy="6" r="1" fill={color} stroke="none"/>
           <line x1="13" y1="13" x2="20" y2="20" {...s} strokeWidth={2.2}/>
-        </svg>
-      );
-    case 'badminton':
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="17" cy="7" r="3.5" {...s}/>
-          <line x1="14.5" y1="9.5" x2="5" y2="19" {...s} strokeWidth={2.2}/>
-          <line x1="15" y1="7" x2="6" y2="16" {...s} strokeOpacity="0.5"/>
-          <line x1="17" y1="10" x2="8" y2="19" {...s} strokeOpacity="0.5"/>
-        </svg>
-      );
-    case 'golf':
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <line x1="6" y1="3" x2="14" y2="18" {...s} strokeWidth={2}/>
-          <path d="M14 18 l4 -2" {...s} strokeWidth={2.5}/>
-          <circle cx="18" cy="20" r="2" {...s}/>
-        </svg>
-      );
-    case 'table_tennis':
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="9" cy="9" r="6" {...s}/>
-          <line x1="3" y1="9" x2="15" y2="9" {...s} strokeOpacity="0.5"/>
-          <line x1="13.5" y1="13.5" x2="20" y2="20" {...s} strokeWidth={2.2}/>
-          <circle cx="20" cy="5" r="2.5" {...s}/>
         </svg>
       );
     default:
@@ -1453,107 +1402,6 @@ function CoachSportsStep({ data, setData, user }: CoachStepProps) {
               </span>
             </div>
           </motion.button>
-        );
-      })}
-    </div>
-  );
-}
-
-function CoachSpecialtiesStep({ data, setData }: StepProps) {
-  const [customInputs, setCustomInputs] = useState<Record<string, string>>(
-    () => Object.fromEntries(data.coachSports.map(s => [s, '']))
-  );
-
-  const toggleSpecialty = (sport: SportType, specialty: string) => {
-    setData(prev => {
-      const current = prev.coachSpecialties[sport] ?? [];
-      const updated = current.includes(specialty)
-        ? current.filter(s => s !== specialty)
-        : [...current, specialty];
-      return { ...prev, coachSpecialties: { ...prev.coachSpecialties, [sport]: updated } };
-    });
-  };
-
-  const addCustomTag = (sport: SportType) => {
-    const val = (customInputs[sport] ?? '').trim();
-    if (!val) return;
-    const current = data.coachSpecialties[sport] ?? [];
-    if (current.includes(val)) return;
-    setData(prev => ({
-      ...prev,
-      coachSpecialties: { ...prev.coachSpecialties, [sport]: [...(prev.coachSpecialties[sport] ?? []), val] },
-    }));
-    setCustomInputs(prev => ({ ...prev, [sport]: '' }));
-  };
-
-  const removeCustomTag = (sport: SportType, tag: string) => {
-    setData(prev => ({
-      ...prev,
-      coachSpecialties: { ...prev.coachSpecialties, [sport]: (prev.coachSpecialties[sport] ?? []).filter(s => s !== tag) },
-    }));
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {data.coachSports.map(sport => {
-        const predefined = COACH_SPECIALTIES[sport] ?? [];
-        const selected = data.coachSpecialties[sport] ?? [];
-        const customTags = selected.filter(s => !predefined.includes(s));
-
-        return (
-          <div key={sport}>
-            <p className="ob-specialty-group-label" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-t2)', marginBottom: 10 }}>
-              {SPORTS[sport]?.name ?? sport}
-            </p>
-
-            {/* Predefined specialty chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-              {predefined.map(specialty => (
-                <button
-                  key={specialty}
-                  className={`ob-skill-btn${selected.includes(specialty) ? ' active' : ''}`}
-                  onClick={() => toggleSpecialty(sport, specialty)}
-                >
-                  {specialty}
-                </button>
-              ))}
-
-              {/* Custom tags */}
-              {customTags.map(tag => (
-                <div key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <span className="ob-skill-btn active" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {tag}
-                    <button
-                      onClick={() => removeCustomTag(sport, tag)}
-                      style={{ background: 'none', border: 'none', color: 'var(--color-bg)', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '1rem' }}
-                      aria-label={`Remove ${tag}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Free-text input */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                className="ob-input"
-                placeholder="Add custom specialty..."
-                value={customInputs[sport] ?? ''}
-                onChange={e => setCustomInputs(prev => ({ ...prev, [sport]: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(sport); } }}
-                style={{ flex: 1 }}
-              />
-              <button
-                className="ob-skill-btn"
-                onClick={() => addCustomTag(sport)}
-                style={{ flexShrink: 0, padding: '10px 16px' }}
-              >
-                Add
-              </button>
-            </div>
-          </div>
         );
       })}
     </div>
