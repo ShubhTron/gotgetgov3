@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  CalendarDays, Clock, MapPin, Users, User,
-  ChevronLeft, ChevronRight, Mail, Trash2, Trophy, X,
+  CalendarDays, Clock, MapPin,
+  ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import {
   format, addDays, addWeeks, startOfDay, startOfWeek, isSameDay, isToday as isDateToday,
@@ -11,12 +11,14 @@ import { motion, useMotionValue, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
 import { PlayerProfileModal } from '@/components/ui';
 import { AvailabilityModal } from '@/components/availability';
-import { InviteResponseModal } from '@/components/schedule';
+import { CalendarBanner, CalendarPromptModal } from '@/components/schedule';
 import { useFilters } from '@/contexts/FilterContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SPORTS, type SportType } from '@/types';
 import { getInitials } from '@/lib/avatar-utils';
+import { useCalendarSync } from '@/hooks/useCalendarSync';
+import { calendarService, buildChallengeEvent, buildEventPayload, buildCompetitionPayload, type CalendarEventPayload } from '@/lib/calendar-service';
 
 type ScheduleFilter = 'my' | 'all' | 'club';
 
@@ -35,38 +37,32 @@ interface ScheduleItem {
   sport?: string;
 }
 
-interface InvitedPlayer {
-  id: string;
-  swipeId: string;
-  fullName: string;
-  avatarUrl?: string;
-  sport: SportType;
-  level: string;
-  createdAt: Date;
-}
-
 export function SchedulePage() {
   const navigate = useNavigate();
   const { scheduleFilter } = useFilters();
   const { user, isGuest, profile } = useAuth();
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
-  const [invitedPlayers, setInvitedPlayers] = useState<InvitedPlayer[]>([]);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
-  const [loadingInvites, setLoadingInvites] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerModalOpen, setPlayerModalOpen] = useState(false);
-  const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [selectedInvitePlayerId, setSelectedInvitePlayerId] = useState<string | null>(null);
-  const [selectedInviteSwipeId, setSelectedInviteSwipeId] = useState<string | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const activeFilter = (scheduleFilter as ScheduleFilter) || 'my';
+  const { connected: calendarConnected, syncCreate, syncDelete } = useCalendarSync();
+  const [calendarPromptOpen, setCalendarPromptOpen] = useState(false);
+  const [calendarPromptData, setCalendarPromptData] = useState<{
+    itemType: 'challenge' | 'event' | 'competition';
+    itemId: string;
+    payload: CalendarEventPayload;
+    summary: string;
+  } | null>(null);
+  const [calendarBannerKey, setCalendarBannerKey] = useState(0);
 
   useEffect(() => {
     if (user) {
-      fetchInvitedPlayers();
       fetchJoinedItems();
     } else if (isGuest) {
       setLoadingSchedule(false);
@@ -223,71 +219,52 @@ export function SchedulePage() {
 
     setSchedule(joinedItems);
     setLoadingSchedule(false);
-  };
 
-  const fetchInvitedPlayers = async () => {
-    if (!user) return;
-    setLoadingInvites(true);
-    const { data: swipes } = await supabase
-      .from('swipe_matches')
-      .select('id, target_user_id, sport, created_at')
-      .eq('user_id', user.id)
-      .eq('direction', 'right')
-      .order('created_at', { ascending: false });
-
-    if (!swipes || swipes.length === 0) {
-      setInvitedPlayers([]);
-      setLoadingInvites(false);
-      return;
-    }
-
-    const targetUserIds = swipes.map((s) => s.target_user_id);
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .in('id', targetUserIds);
-    const { data: sportProfiles } = await supabase
-      .from('user_sport_profiles')
-      .select('user_id, sport, self_assessed_level')
-      .in('user_id', targetUserIds);
-
-    const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
-    const sportMap = new Map<string, { sport: SportType; level: string }>();
-    sportProfiles?.forEach((sp) => {
-      if (!sportMap.has(sp.user_id)) {
-        sportMap.set(sp.user_id, { sport: sp.sport as SportType, level: sp.self_assessed_level || 'beginner' });
+    // If calendar is available but not connected, offer to sync confirmed items once per session
+    if (
+      localStorage.getItem('calendar_connected') !== 'true' &&
+      sessionStorage.getItem('calendar_prompt_shown') !== 'true'
+    ) {
+      const firstConfirmed = joinedItems.find((item) => item.status === 'confirmed');
+      if (firstConfirmed) {
+        sessionStorage.setItem('calendar_prompt_shown', 'true');
+        const rawId = firstConfirmed.id.replace(/^(event-|comp-|challenge-)/, '');
+        let itemType: 'challenge' | 'event' | 'competition' = 'challenge';
+        if (firstConfirmed.id.startsWith('event-')) itemType = 'event';
+        else if (firstConfirmed.id.startsWith('comp-')) itemType = 'competition';
+        const summary = firstConfirmed.opponent
+          ? `${firstConfirmed.title} vs ${firstConfirmed.opponent.name} has been confirmed`
+          : `${firstConfirmed.title} has been confirmed`;
+        setCalendarPromptData({
+          itemType,
+          itemId: rawId,
+          payload: {
+            title: firstConfirmed.title,
+            startDate: firstConfirmed.date,
+            endDate: new Date(firstConfirmed.date.getTime() + 90 * 60 * 1000),
+            location: firstConfirmed.location,
+            notes: 'via GotGetGov',
+          },
+          summary,
+        });
+        setCalendarPromptOpen(true);
       }
-    });
-
-    const mapped: InvitedPlayer[] = swipes.map((swipe) => {
-      const p = profileMap.get(swipe.target_user_id);
-      const sportInfo = sportMap.get(swipe.target_user_id);
-      return {
-        id: swipe.target_user_id,
-        swipeId: swipe.id,
-        fullName: p?.full_name || 'Unknown Player',
-        avatarUrl: p?.avatar_url || undefined,
-        sport: (swipe.sport as SportType) || sportInfo?.sport || 'tennis',
-        level: sportInfo?.level || 'beginner',
-        createdAt: new Date(swipe.created_at),
-      };
-    });
-    setInvitedPlayers(mapped);
-    setLoadingInvites(false);
-  };
-
-  const handleRemoveInvite = async (swipeId: string) => {
-    await supabase.from('swipe_matches').delete().eq('id', swipeId);
-    setInvitedPlayers((prev) => prev.filter((p) => p.swipeId !== swipeId));
+    }
   };
 
   const handleCancelScheduleItem = async (itemId: string) => {
     if (itemId.startsWith('event-')) {
-      await supabase.from('event_registrations').delete().eq('event_id', itemId.replace('event-', '')).eq('user_id', user!.id);
+      const rawId = itemId.replace('event-', '');
+      await supabase.from('event_registrations').delete().eq('event_id', rawId).eq('user_id', user!.id);
+      await syncDelete('event', rawId);
     } else if (itemId.startsWith('comp-')) {
-      await supabase.from('competition_entries').delete().eq('competition_id', itemId.replace('comp-', '')).eq('user_id', user!.id);
+      const rawId = itemId.replace('comp-', '');
+      await supabase.from('competition_entries').delete().eq('competition_id', rawId).eq('user_id', user!.id);
+      await syncDelete('competition', rawId);
     } else if (itemId.startsWith('challenge-')) {
-      await supabase.from('challenge_players').delete().eq('challenge_id', itemId.replace('challenge-', '')).eq('user_id', user!.id);
+      const rawId = itemId.replace('challenge-', '');
+      await supabase.from('challenge_players').delete().eq('challenge_id', rawId).eq('user_id', user!.id);
+      await syncDelete('challenge', rawId);
     }
     setSchedule((prev) => prev.filter((item) => item.id !== itemId));
   };
@@ -295,20 +272,6 @@ export function SchedulePage() {
   const handlePlayerClick = (playerId: string) => {
     setSelectedPlayerId(playerId);
     setPlayerModalOpen(true);
-  };
-
-  const handleInviteClick = (playerId: string, swipeId: string) => {
-    setSelectedInvitePlayerId(playerId);
-    setSelectedInviteSwipeId(swipeId);
-    setInviteModalOpen(true);
-  };
-
-  const handleInviteAccept = async () => {
-    await Promise.all([fetchInvitedPlayers(), fetchJoinedItems()]);
-  };
-
-  const handleInviteRefuse = async () => {
-    await fetchInvitedPlayers();
   };
 
   const filteredSchedule = schedule
@@ -339,6 +302,15 @@ export function SchedulePage() {
     [filteredSchedule, selectedDate],
   );
 
+  const pastMatches = useMemo(
+    () =>
+      filteredSchedule
+        .filter((item) => item.date < startOfDay(new Date()))
+        .sort((a, b) => b.date.getTime() - a.date.getTime()),
+    [filteredSchedule],
+  );
+
+  const visibleHistory = showAllHistory ? pastMatches : pastMatches.slice(0, 3);
 
   const hasEventOnDay = (day: Date) =>
     filteredSchedule.some((item) => isSameDay(item.date, day));
@@ -378,6 +350,12 @@ export function SchedulePage() {
           <CalendarDays size={19} style={{ color: 'var(--color-acc)' }} />
         </button>
       </div>
+
+      {/* ── Calendar Connect Banner ───────────────────────────────────────── */}
+      <CalendarBanner
+        key={calendarBannerKey}
+        onConnected={() => setCalendarBannerKey((k) => k + 1)}
+      />
 
       {/* ── 2-Week Calendar Grid ───────────────────────────────────────────── */}
       <div style={{ padding: '0 var(--space-5) var(--space-4)' }}>
@@ -516,11 +494,11 @@ export function SchedulePage() {
         )}
       </div>
 
-      {/* ── Pending Invites ────────────────────────────────────────────────── */}
-      {invitedPlayers.length > 0 && (
+      {/* ── Match History ─────────────────────────────────────────────────── */}
+      {pastMatches.length > 0 && (
         <div style={{ padding: '0 var(--space-5) var(--space-4)' }}>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: 'var(--space-3)',
           }}>
             <span style={{
@@ -528,35 +506,34 @@ export function SchedulePage() {
               fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em',
               color: 'var(--color-t2)',
             }}>
-              Pending Invites
+              Match History
             </span>
             <span style={{
               fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
               background: 'var(--color-surf-2)', color: 'var(--color-t2)',
               padding: '1px 8px', borderRadius: 'var(--radius-full)',
             }}>
-              {invitedPlayers.length}
+              {pastMatches.length}
             </span>
           </div>
-          {loadingInvites ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%',
-                border: '2px solid var(--color-acc)', borderTopColor: 'transparent',
-                animation: 'spin 0.7s linear infinite',
-              }} />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              {invitedPlayers.map((player) => (
-                <SwipeableInvitedCard
-                  key={player.swipeId}
-                  player={player}
-                  onRemove={() => handleRemoveInvite(player.swipeId)}
-                  onClick={() => handleInviteClick(player.id, player.swipeId)}
-                />
-              ))}
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            {visibleHistory.map((item) => (
+              <AgendaCard key={item.id} item={item} onPlayerClick={handlePlayerClick} />
+            ))}
+          </div>
+          {pastMatches.length > 3 && (
+            <button
+              onClick={() => setShowAllHistory((v) => !v)}
+              style={{
+                width: '100%', marginTop: 'var(--space-3)',
+                padding: '10px', borderRadius: 'var(--radius-xl)',
+                border: '1.5px solid var(--color-bdr)', background: 'none',
+                cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 600,
+                fontSize: 'var(--text-sm)', color: 'var(--color-t2)',
+              }}
+            >
+              {showAllHistory ? 'Show Less' : `Show More (${pastMatches.length - 3} more)`}
+            </button>
           )}
         </div>
       )}
@@ -573,14 +550,16 @@ export function SchedulePage() {
         onChallenge={() => setPlayerModalOpen(false)}
         onMessage={() => setPlayerModalOpen(false)}
       />
-      <InviteResponseModal
-        open={inviteModalOpen}
-        onOpenChange={setInviteModalOpen}
-        playerId={selectedInvitePlayerId}
-        swipeId={selectedInviteSwipeId}
-        onAccept={handleInviteAccept}
-        onRefuse={handleInviteRefuse}
-      />
+      {calendarPromptData && (
+        <CalendarPromptModal
+          open={calendarPromptOpen}
+          onClose={() => setCalendarPromptOpen(false)}
+          itemType={calendarPromptData.itemType}
+          itemId={calendarPromptData.itemId}
+          eventPayload={calendarPromptData.payload}
+          eventSummary={calendarPromptData.summary}
+        />
+      )}
     </div>
   );
 }
@@ -619,41 +598,6 @@ function SwipeableScheduleCard({ item, onCancel, onPlayerClick }: {
         style={{ x, background: 'var(--color-surf)', position: 'relative' }}
       >
         <AgendaCard item={item} onPlayerClick={onPlayerClick} />
-      </motion.div>
-    </div>
-  );
-}
-
-function SwipeableInvitedCard({ player, onRemove, onClick }: {
-  player: InvitedPlayer;
-  onRemove: () => void;
-  onClick: () => void;
-}) {
-  const constraintsRef = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const bg = useTransform(x, [-150, 0], ['rgb(239 68 68)', 'var(--color-surf)']);
-  const deleteOpacity = useTransform(x, [-150, -50, 0], [1, 0.5, 0]);
-
-  const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x < -100) onRemove();
-  };
-
-  return (
-    <div ref={constraintsRef} style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-xl)' }}>
-      <motion.div style={{ background: bg, position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 24 }}>
-        <motion.div style={{ opacity: deleteOpacity, display: 'flex', alignItems: 'center', gap: 8, color: '#fff' }}>
-          <Trash2 size={18} />
-          <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14 }}>Remove</span>
-        </motion.div>
-      </motion.div>
-      <motion.div
-        drag="x"
-        dragConstraints={{ left: -150, right: 0 }}
-        dragElastic={0.1}
-        onDragEnd={handleDragEnd}
-        style={{ x, background: 'var(--color-surf)', position: 'relative' }}
-      >
-        <InvitedPlayerCard player={player} onClick={onClick} />
       </motion.div>
     </div>
   );
@@ -810,67 +754,6 @@ function AgendaCard({ item, onPlayerClick }: {
       <div style={{ display: 'flex', alignItems: 'center', color: 'var(--color-t3)', flexShrink: 0 }}>
         <ChevronRight size={16} />
       </div>
-    </div>
-  );
-}
-
-// ─── Invited player card ──────────────────────────────────────────────────────
-
-function InvitedPlayerCard({ player, onClick }: { player: InvitedPlayer; onClick: () => void }) {
-  const sport = SPORTS[player.sport];
-  const timeAgo = getTimeAgo(player.createdAt);
-
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: 'var(--color-surf)', borderRadius: 'var(--radius-xl)',
-        padding: 'var(--space-4)', display: 'flex', alignItems: 'center',
-        gap: 'var(--space-3)', cursor: 'pointer',
-        boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
-      }}
-    >
-      {/* Avatar */}
-      <div style={{
-        width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-        background: 'var(--color-surf-2)', overflow: 'hidden',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 16,
-        color: 'var(--color-t2)',
-      }}>
-        {player.avatarUrl
-          ? <img src={player.avatarUrl} alt={player.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : getInitials(player.fullName)
-        }
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* RSVP badge */}
-        <span style={{
-          fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          background: 'color-mix(in srgb, #FFB300 12%, transparent)', color: '#FFB300',
-          padding: '1px 8px', borderRadius: 'var(--radius-full)',
-          textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4,
-        }}>
-          <Mail size={10} />
-          RSVP Pending
-        </span>
-        <p style={{
-          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)',
-          color: 'var(--color-t1)', margin: '0 0 2px',
-        }}>
-          {player.fullName}
-        </p>
-        <p style={{
-          fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-t3)',
-          margin: 0,
-        }}>
-          {sport?.name || player.sport} · <span style={{ textTransform: 'capitalize' }}>{player.level}</span> · {timeAgo}
-        </p>
-      </div>
-
-      <ChevronRight size={16} style={{ color: 'var(--color-t3)', flexShrink: 0 }} />
     </div>
   );
 }
