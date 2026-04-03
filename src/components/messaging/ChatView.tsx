@@ -106,19 +106,13 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
 
     console.log('[ChatView] Setting up subscriptions for conversation:', conversation.id);
 
-    // Subscribe to new messages — uses private Broadcast channel (zero WAL reads)
+    // Subscribe to new messages — uses postgres_changes on messages table
     const messageChannel = subscribeToConversation(conversation.id, (newMsg) => {
       console.log('[ChatView] Received new message in callback:', newMsg.id, 'from:', newMsg.senderId);
 
       // Check if message already displayed (deduplication)
       if (displayedMessageIds.current.has(newMsg.id)) {
         console.log('[ChatView] Message already displayed, skipping:', newMsg.id);
-        return;
-      }
-
-      // Don't add our own messages (already added optimistically)
-      if (newMsg.senderId === user?.id) {
-        console.log('[ChatView] Skipping own message (already added optimistically):', newMsg.id);
         return;
       }
 
@@ -138,7 +132,7 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
 
       // Mark as read when we receive a message while viewing
       if (user?.id) markAsRead(conversation.id, user.id);
-    });
+    }, user?.id);
     console.log('[ChatView] Message channel created successfully');
 
     // Subscribe to typing indicators with 5-second auto-removal

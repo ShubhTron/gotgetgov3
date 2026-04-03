@@ -10,6 +10,8 @@ const NavVisibilityContext = createContext<NavVisibilityContextValue>({
   setHideNav: () => {},
 });
 
+export { NavVisibilityContext };
+
 export function NavVisibilityProvider({ children }: { children: ReactNode }) {
   const [hideNav, setHideNav] = useState(false);
   return (
