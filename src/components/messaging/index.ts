@@ -7,3 +7,5 @@ export { GroupInfoModal } from './GroupInfoModal';
 export { ChannelInfoModal } from './ChannelInfoModal';
 export { AddMemberModal } from './AddMemberModal';
 export { AddSubscriberModal } from './AddSubscriberModal';
+export { ComposeMenu } from './ComposeMenu';
+export { NewChatModal } from './NewChatModal';

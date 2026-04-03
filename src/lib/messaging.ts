@@ -509,15 +509,12 @@ export async function markAsRead(
 
 
 /**
- * Subscribe to new messages in a conversation via Supabase Realtime Broadcast.
+ * Subscribe to new messages in a conversation via Supabase Realtime.
  *
- * Uses a private broadcast channel `messages:{conversationId}` fed by the
- * `broadcast_new_message` DB trigger (migration 045). This is pure WebSocket —
- * zero WAL reads, zero list_changes calls. Previously used postgres_changes
- * which caused 3000+ list_changes calls per interval with just 2 active users.
+ * Uses postgres_changes to listen for INSERT events on the messages table.
+ * This is more reliable than broadcast channels and works across all Supabase versions.
  *
- * The DB trigger also fans out to `user-messages:{userId}` for each participant,
- * so AppShell/ConversationList badge updates work without client-side fan-out.
+ * Note: Requires messages table to be in the realtime publication.
  */
 export function subscribeToConversation(
   conversationId: string,
@@ -539,13 +536,27 @@ export function subscribeToConversation(
     }
   }
 
+  console.log('[subscribeToConversation] Creating new channel subscription for:', conversationId);
+
   const channel = supabase
-    .channel(channelKey, { config: { private: true } })
+    .channel(channelKey)
     .on(
-      'broadcast',
-      { event: 'new-message' },
-      async (payload: { payload: { id: string; conversation_id: string; sender_id: string; content: string; created_at: string } }) => {
-        const msg = payload.payload;
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`
+      },
+      async (payload) => {
+        console.log('[subscribeToConversation] Received postgres_changes event:', payload);
+        const msg = payload.new as any;
+
+        // Skip if this is our own message (already added optimistically)
+        if (currentUserId && msg.sender_id === currentUserId) {
+          console.log('[subscribeToConversation] Skipping own message:', msg.id);
+          return;
+        }
 
         // Fetch sender profile
         const { data: profile } = await supabase
@@ -554,6 +565,7 @@ export function subscribeToConversation(
           .eq('id', msg.sender_id)
           .maybeSingle() as { data: { full_name: string; avatar_url: string | null } | null };
 
+        console.log('[subscribeToConversation] Calling onNewMessage callback with message:', msg.id);
         onNewMessage({
           id: msg.id,
           conversationId: msg.conversation_id,
@@ -566,7 +578,11 @@ export function subscribeToConversation(
       }
     )
     .subscribe((status) => {
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      console.log('[subscribeToConversation] Channel status changed to:', status);
+      if (status === 'SUBSCRIBED') {
+        console.log('[subscribeToConversation] Successfully subscribed to channel:', channelKey);
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        console.error('[subscribeToConversation] Channel error, status:', status);
         activeSubscriptions.delete(channelKey);
       }
     });
@@ -576,10 +592,9 @@ export function subscribeToConversation(
 }
 
 /**
- * Subscribe to user-level message notifications via private Broadcast channel.
- * Events are pushed by the `broadcast_new_message` DB trigger (migration 045)
- * for each conversation participant on every message INSERT — pure WebSocket,
- * zero WAL reads. Works even when ChatView is not open (e.g. user is on another page).
+ * Subscribe to user-level message notifications.
+ * Listens for new messages in any conversation the user is part of.
+ * Used for badge counts and conversation list updates.
  */
 export function subscribeToUserMessageNotifications(
   userId: string,
@@ -600,12 +615,28 @@ export function subscribeToUserMessageNotifications(
   }
 
   const channel = supabase
-    .channel(channelKey, { config: { private: true } })
+    .channel(channelKey)
     .on(
-      'broadcast',
-      { event: 'new-message' },
-      (payload: { payload: { conversationId: string } }) => {
-        onNewMessage(payload.payload.conversationId);
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      },
+      async (payload) => {
+        const msg = payload.new as any;
+        
+        // Check if user is a participant in this conversation
+        const { data: isParticipant } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('conversation_id', msg.conversation_id)
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (isParticipant && msg.sender_id !== userId) {
+          onNewMessage(msg.conversation_id);
+        }
       }
     )
     .subscribe((status) => {

@@ -17,14 +17,14 @@ build
 *.local
 
 # Environment variables
-.env
+*.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
 # Editor directories and files
-.vscode/*
+*.vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -36,8 +36,8 @@ build
 
 # Kiro/Claude specific
 .claude
-.kiro/settings/
-
+.kiro
+.kiro/specs
 # OS files
 Thumbs.db
 
@@ -70,6 +70,6 @@ storybook-static
 *.swp
 *~
 
-# Documentation
-*.md
+# Documentation (commented out to allow README and spec docs)
+# *.md
 

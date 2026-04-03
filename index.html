@@ -1,10 +1,56 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GotGetGo</title>
+    
+    <!-- Theme Initializer: Must run before any rendering to prevent flash -->
+    <script>
+      (function() {
+        // SSR/Node environment check
+        if (typeof window === 'undefined') {
+          return;
+        }
+        
+        try {
+          // Try to read from localStorage with error handling
+          var stored = null;
+          try {
+            stored = localStorage.getItem('gg-theme');
+          } catch (storageError) {
+            console.warn('localStorage unavailable, falling back to system theme:', storageError);
+          }
+          
+          if (stored === 'light' || stored === 'dark') {
+            document.documentElement.setAttribute('data-theme', stored);
+            return;
+          }
+          
+          // Fall back to system preference
+          if (window.matchMedia) {
+            try {
+              var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+              var theme = darkQuery.matches ? 'dark' : 'light';
+              document.documentElement.setAttribute('data-theme', theme);
+            } catch (mediaError) {
+              console.warn('Media query error, using light theme:', mediaError);
+              document.documentElement.setAttribute('data-theme', 'light');
+            }
+          } else {
+            // Fallback for unsupported browsers
+            document.documentElement.setAttribute('data-theme', 'light');
+            console.warn('System theme detection unavailable, using light theme');
+          }
+        } catch (e) {
+          // Fail gracefully with light theme fallback
+          document.documentElement.setAttribute('data-theme', 'light');
+          console.warn('Theme initialization error, using light theme:', e);
+        }
+      })();
+    </script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;1,400;1,500&family=Figtree:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">

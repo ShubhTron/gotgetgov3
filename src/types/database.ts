@@ -4,12 +4,7 @@ export type SportType =
   | 'tennis'
   | 'squash'
   | 'pickleball'
-  | 'golf'
-  | 'badminton'
-  | 'table_tennis'
-  | 'racquetball_squash57'
-  | 'beach_tennis'
-  | 'real_tennis';
+  | 'beach_tennis';
 
 export type ClubRole = 'player' | 'coach' | 'comp_organizer' | 'club_admin';
 

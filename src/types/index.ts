@@ -47,39 +47,9 @@ export const SPORTS = {
     icon: 'racquet',
     officialRatingSystem: 'DUPR',
   },
-  golf: {
-    id: 'golf',
-    name: 'Golf',
-    icon: 'golf',
-    officialRatingSystem: 'WHS',
-  },
-  badminton: {
-    id: 'badminton',
-    name: 'Badminton',
-    icon: 'shuttlecock',
-    officialRatingSystem: undefined,
-  },
-  table_tennis: {
-    id: 'table_tennis',
-    name: 'Table Tennis',
-    icon: 'paddle',
-    officialRatingSystem: undefined,
-  },
-  racquetball_squash57: {
-    id: 'racquetball_squash57',
-    name: 'Racquetball / Squash 57',
-    icon: 'racquet',
-    officialRatingSystem: undefined,
-  },
   beach_tennis: {
     id: 'beach_tennis',
     name: 'Beach Tennis',
-    icon: 'racquet',
-    officialRatingSystem: undefined,
-  },
-  real_tennis: {
-    id: 'real_tennis',
-    name: 'Real Tennis',
     icon: 'racquet',
     officialRatingSystem: undefined,
   },
@@ -154,4 +124,9 @@ export interface SportScoringConfig {
   maxPoints: number;
   winByTwo: boolean;
   label: string;
+}
+
+export interface SportFormatConfig {
+  defaultFormat: 'singles' | 'doubles';
+  doublesOnly: boolean;
 }

@@ -22,9 +22,10 @@ export interface DiscoveryCardProps {
 const SPORT_ICONS: Record<string, string> = {
   tennis: '🎾',
   pickleball: '🏓',
-  badminton: '🏸',
   squash: '🎾',
-  table_tennis: '🏓',
+  platform_tennis: '🎾',
+  padel: '🏓',
+  beach_tennis: '🎾',
 };
 
 const CONTENT_TYPE_ICONS = {

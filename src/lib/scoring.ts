@@ -6,6 +6,7 @@ import type {
   SubmitMatchResultPayload,
   ScoringError,
   SportScoringConfig,
+  SportFormatConfig,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -18,12 +19,25 @@ export const SPORT_SCORING: Record<string, SportScoringConfig> = {
   padel: { type: 'sets', defaultSets: 3, maxPoints: 7, winByTwo: true, label: 'Games' },
   squash: { type: 'games', defaultSets: 5, maxPoints: 11, winByTwo: true, label: 'Points' },
   pickleball: { type: 'games', defaultSets: 3, maxPoints: 11, winByTwo: true, label: 'Points' },
-  badminton: { type: 'games', defaultSets: 3, maxPoints: 21, winByTwo: true, label: 'Points' },
-  table_tennis: { type: 'games', defaultSets: 5, maxPoints: 11, winByTwo: true, label: 'Points' },
-  racquetball_squash57: { type: 'games', defaultSets: 5, maxPoints: 15, winByTwo: false, label: 'Points' },
-  beach_tennis: { type: 'sets', defaultSets: 2, maxPoints: 6, winByTwo: true, label: 'Games' },
-  real_tennis: { type: 'sets', defaultSets: 3, maxPoints: 6, winByTwo: true, label: 'Games' },
-  golf: { type: 'points', defaultSets: 1, maxPoints: 18, winByTwo: false, label: 'Holes' },
+  beach_tennis: { type: 'sets', defaultSets: 3, maxPoints: 7, winByTwo: true, label: 'Games' },
+};
+
+export const SPORT_FORMAT_CONFIG: Record<string, SportFormatConfig> = {
+  tennis:          { defaultFormat: 'singles', doublesOnly: false },
+  platform_tennis: { defaultFormat: 'doubles', doublesOnly: true  },
+  padel:           { defaultFormat: 'doubles', doublesOnly: true  },
+  squash:          { defaultFormat: 'singles', doublesOnly: false },
+  pickleball:      { defaultFormat: 'singles', doublesOnly: false },
+  beach_tennis:    { defaultFormat: 'singles', doublesOnly: false },
+};
+
+export const SPORT_SCORING_NOTES: Record<string, string> = {
+  tennis:          'First to 6 games, win by 2. Tiebreak at 6–6 (first to 7). Best of 3 sets.',
+  platform_tennis: 'First to 6 games, win by 2. Tiebreak at 6–6 (first to 7). Best of 3 sets.',
+  padel:           'First to 6 games, win by 2. Tiebreak at 6–6 (first to 7). Best of 3 sets.',
+  squash:          'First to 11 points, win by 2. Deuce at 10–10. Best of 5 games.',
+  pickleball:      'First to 11 points, win by 2. Best of 3 games.',
+  beach_tennis:    'First to 6 games, win by 2. Tiebreak at 6–6 (first to 7). Best of 3 sets.',
 };
 
 // ---------------------------------------------------------------------------
