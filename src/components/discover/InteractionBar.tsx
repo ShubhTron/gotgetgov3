@@ -6,6 +6,7 @@ interface InteractionBarProps {
   onPass: () => void;
   onConnect: () => void;
   onUndo?: () => void;
+  onShuffle?: () => void;
   onFavorite?: () => void;
   canUndo?: boolean;
   isFavorited?: boolean;
@@ -24,7 +25,7 @@ const circleBtn: React.CSSProperties = {
 };
 
 export function InteractionBar({
-  onPass, onConnect, onUndo, onFavorite,
+  onPass, onConnect, onUndo, onShuffle, onFavorite,
   canUndo = false, isFavorited = false, disabled = false,
 }: InteractionBarProps) {
   return (

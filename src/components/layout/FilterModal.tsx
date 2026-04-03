@@ -199,8 +199,7 @@ export function FilterModal({
               )}
 
               {activeFilter === 'distance' && (() => {
-                const MIN_MI = 6, MAX_MI = 50;
-                const SNAPS = [6, 16, 25, 50];
+                const MIN_MI = 1, MAX_MI = 50;
                 const pct = ((distMiles - MIN_MI) / (MAX_MI - MIN_MI)) * 100;
                 return (
                   <div style={{ paddingTop: 56, paddingBottom: 8 }}>
@@ -235,30 +234,11 @@ export function FilterModal({
                           position: 'absolute', left: 0, top: 0, bottom: 0,
                           width: `${pct}%`, background: 'var(--color-acc)', borderRadius: 999,
                         }} />
-                        {/* Snap dots */}
-                        {SNAPS.map(snap => {
-                          const sp = ((snap - MIN_MI) / (MAX_MI - MIN_MI)) * 100;
-                          const active = distMiles >= snap;
-                          return (
-                            <div key={snap} style={{
-                              position: 'absolute', top: '50%',
-                              left: `${sp}%`, transform: 'translate(-50%, -50%)',
-                              width: 10, height: 10, borderRadius: '50%',
-                              background: active ? 'var(--color-acc)' : 'var(--color-bdr)',
-                              border: '2px solid var(--color-surf)',
-                              zIndex: 1,
-                            }} />
-                          );
-                        })}
                         {/* Thumb */}
                         <input
                           type="range" min={MIN_MI} max={MAX_MI} step={1}
                           value={distMiles}
-                          onChange={e => {
-                            const mi = Number(e.target.value);
-                            setDistMiles(mi);
-                            onDistanceChange(Math.round(mi / 0.621));
-                          }}
+                          onChange={e => setDistMiles(Number(e.target.value))}
                           style={{
                             position: 'absolute', inset: 0, width: '100%',
                             opacity: 0, cursor: 'pointer', height: '100%', margin: 0,
@@ -276,23 +256,19 @@ export function FilterModal({
                         }} />
                       </div>
 
-                      {/* Snap labels */}
+                      {/* Min/Max labels */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, padding: '0 2px' }}>
-                        {SNAPS.map(snap => (
-                          <span key={snap} style={{
-                            fontFamily: 'var(--font-body)', fontSize: 12,
-                            color: distMiles >= snap ? 'var(--color-t2)' : 'var(--color-t3)',
-                            fontWeight: distMiles === snap ? 700 : 400,
-                          }}>
-                            {snap} mi
-                          </span>
-                        ))}
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)' }}>1 mi</span>
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)' }}>50 mi</span>
                       </div>
                     </div>
 
-                    {/* Done button */}
+                    {/* Apply button */}
                     <button
-                      onClick={onClose}
+                      onClick={() => {
+                        onDistanceChange(Math.round(distMiles / 0.621));
+                        onClose();
+                      }}
                       style={{
                         marginTop: 16, width: '100%', padding: '14px 0',
                         borderRadius: 999, border: 'none',

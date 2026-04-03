@@ -84,6 +84,16 @@ export type FeedItemType =
 
 export type AudienceType = 'circle' | 'club' | 'event' | 'competition' | 'public';
 
+export interface CalendarEventMapping {
+  id: string;
+  user_id: string;
+  item_type: 'challenge' | 'event' | 'competition';
+  item_id: string;
+  native_event_id: string;
+  platform: 'ios' | 'android';
+  created_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -862,6 +872,23 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['match_result_players']['Insert']>;
         Relationships: [];
       };
+      liked_players: {
+        Row: {
+          id: string;
+          liker_id: string;
+          liked_user_id: string;
+          sport: SportType;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          liker_id: string;
+          liked_user_id: string;
+          sport: SportType;
+        };
+        Update: Partial<Database['public']['Tables']['liked_players']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -935,3 +962,10 @@ export type ProfileDetails = Database['public']['Tables']['profile_details']['Ro
 export type ProfilePhoto = Database['public']['Tables']['profile_photos']['Row'];
 export type DiscoveryModeAnalytics = Database['public']['Tables']['discovery_mode_analytics']['Row'];
 export type ConnectionRequest = Database['public']['Tables']['connection_requests']['Row'];
+
+export interface LikedPlayer {
+  id: string;           // liked_user_id
+  fullName: string;
+  avatarUrl: string | null;
+  sport: SportType;
+}

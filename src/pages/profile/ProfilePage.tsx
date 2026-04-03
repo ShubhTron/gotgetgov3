@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Trophy, ChevronRight, LogOut, ClipboardList, Copy, Check } from 'lucide-react';
+import { MapPin, Trophy, ChevronRight, ClipboardList, Copy, Check, Heart } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { AvailabilityModal } from '@/components/availability';
 import { SportRow } from '@/components/me/SportRow';
 import { SettingsRow } from '@/components/me/SettingsRow';
+import { LikedPlayersSection } from '@/components/me/LikedPlayersSection';
 import { SectionTitle } from '@/design-system';
 import {
   IconCalendar,
@@ -17,7 +18,7 @@ import {
 } from '@/design-system/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import type { SportType } from '@/types/database';
+import type { SportType, LikedPlayer } from '@/types/database';
 import { fetchPendingScoreMatches } from '@/lib/scoring';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -89,8 +90,11 @@ export function ProfilePage() {
 
   const [uploading, setUploading] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [likedModalOpen, setLikedModalOpen] = useState(false);
   const [pendingScoreCount, setPendingScoreCount] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [likedPlayers, setLikedPlayers] = useState<LikedPlayer[]>([]);
+  const [likedLoading, setLikedLoading] = useState<boolean>(true);
 
   const shortId = user?.id ? `#${user.id.split('-')[0].toUpperCase()}` : '#--------';
 
@@ -114,6 +118,28 @@ export function ProfilePage() {
     fetchPendingScoreMatches(user.id).then(({ data }) => {
       setPendingScoreCount(data?.length ?? 0);
     });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('liked_players')
+      .select('liked_user_id, sport, profiles!liked_user_id(full_name, avatar_url)')
+      .eq('liker_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setLikedPlayers(
+          (data ?? [])
+            .filter((r: any) => r.profiles != null)
+            .map((r: any) => ({
+              id: r.liked_user_id,
+              fullName: r.profiles?.full_name ?? 'Unknown',
+              avatarUrl: r.profiles?.avatar_url ?? null,
+              sport: r.sport,
+            }))
+        );
+        setLikedLoading(false);
+      });
   }, [user?.id]);
 
   const handleSignOut = async () => {
@@ -511,7 +537,39 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* ── E. Activity Feed ─────────────────────────────────────────────────── */}
+      {/* ── E. Liked Players (button → opens modal) ──────────────────────── */}
+      <div style={{ padding: '0 var(--space-5)', marginTop: 'var(--space-6)' }}>
+        <div style={{ background: 'var(--color-surf)', borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+          <button
+            onClick={() => setLikedModalOpen(true)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+              padding: 'var(--space-4) var(--space-5)',
+              background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <div style={{
+              width: 40, height: 40, borderRadius: 'var(--radius-md)',
+              background: 'rgba(220,38,38,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Heart size={18} color="#ef4444" fill="#ef4444" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-t1)' }}>
+                Liked Players
+              </div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-t3)', marginTop: 2 }}>
+                {likedLoading ? 'Loading…' : likedPlayers.length === 0 ? 'No liked players yet' : `${likedPlayers.length} player${likedPlayers.length !== 1 ? 's' : ''}`}
+              </div>
+            </div>
+            <ChevronRight size={14} style={{ color: 'var(--color-t3)', flexShrink: 0 }} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── F. Activity Feed ─────────────────────────────────────────────────── */}
       <div style={{ padding: '0 var(--space-5)', marginTop: 'var(--space-6)' }}>
         <div style={{ marginBottom: 'var(--space-3)' }}>
           <SectionTitle>Activity Feed</SectionTitle>
@@ -590,7 +648,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* ── F. My Clubs ──────────────────────────────────────────────────────── */}
+      {/* ── G. My Clubs ──────────────────────────────────────────────────────── */}
       <div style={{ padding: '0 var(--space-5)', marginTop: 'var(--space-6)' }}>
         <div style={{ marginBottom: 'var(--space-3)' }}>
           <SectionTitle>My Clubs</SectionTitle>
@@ -670,7 +728,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* ── G. Settings rows ─────────────────────────────────────────────────── */}
+      {/* ── H. Settings rows ─────────────────────────────────────────────────── */}
       <div style={{ padding: '0 var(--space-5)', marginTop: 'var(--space-6)' }}>
         <div
           style={{
@@ -720,7 +778,7 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* ── H. Sign Out ──────────────────────────────────────────────────────── */}
+      {/* ── I. Sign Out ──────────────────────────────────────────────────────── */}
       <div style={{ padding: '0 var(--space-5)', marginTop: 'var(--space-6)' }}>
         <button
           onClick={handleSignOut}
@@ -749,6 +807,13 @@ export function ProfilePage() {
       <AvailabilityModal
         isOpen={availabilityModalOpen}
         onClose={() => setAvailabilityModalOpen(false)}
+      />
+
+      <LikedPlayersSection
+        likedPlayers={likedPlayers}
+        loading={likedLoading}
+        open={likedModalOpen}
+        onClose={() => setLikedModalOpen(false)}
       />
     </div>
   );

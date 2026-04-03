@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 import { IconChevronDown } from '../../design-system';
 import type { FilterSport, FilterSkill } from '../../types/discover';
 import { FilterModal } from './FilterModal';
@@ -10,6 +10,10 @@ interface FilterTriptychProps {
   onSportChange: (v: FilterSport) => void;
   onDistanceChange: (v: number) => void;
   onSkillChange: (v: FilterSkill) => void;
+}
+
+export interface FilterTriptychHandle {
+  openFilter: (filter: 'sport' | 'distance' | 'skill') => void;
 }
 
 const SPORT_LABEL: Record<string, string> = {
@@ -52,10 +56,10 @@ function Col({ label, value, onClick }: { label: string; value: string; onClick:
   );
 }
 
-export function FilterTriptych({
+export const FilterTriptych = forwardRef<FilterTriptychHandle, FilterTriptychProps>(function FilterTriptych({
   sport, distanceKm, skill,
   onSportChange, onDistanceChange, onSkillChange,
-}: FilterTriptychProps) {
+}, ref) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'sport' | 'distance' | 'skill' | null>(null);
 
@@ -67,6 +71,8 @@ export function FilterTriptych({
     setActiveFilter(filter);
     setIsModalOpen(true);
   };
+
+  useImperativeHandle(ref, () => ({ openFilter }));
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -108,4 +114,4 @@ export function FilterTriptych({
       />
     </>
   );
-}
+});
