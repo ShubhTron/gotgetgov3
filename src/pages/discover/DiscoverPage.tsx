@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { haversineKm } from '../../lib/haversine';
 import { eloMatchScore, getLevelElo } from '../../lib/elo';
 import { FilterTriptych } from '../../components/layout/FilterTriptych';
+import type { FilterTriptychHandle } from '../../components/layout/FilterTriptych';
 import { InteractionBar } from '../../components/discover/InteractionBar';
 import { SwipeDeck } from '../../components/discover/SwipeDeck';
 import { EMMA_DISCOVER_PLAYER, EMMA_USER_ID } from '../../data/emmaDemoProfile';
@@ -58,6 +59,7 @@ export function DiscoverPage() {
   const { user, profile, isGuest } = useAuth();
   const { tutorialStep, advanceTutorial, registerTarget, resetTutorial } = useGuestTutorial();
   const deckRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<FilterTriptychHandle>(null);
   const [players, setPlayers] = useState<DiscoverPlayer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -174,11 +176,11 @@ export function DiscoverPage() {
   // Load favorites on mount
   useEffect(() => {
     if (!user) return;
-    supabase.from('favorites')
-      .select('target_user_id')
-      .eq('user_id', user.id)
+    supabase.from('liked_players')
+      .select('liked_user_id')
+      .eq('liker_id', user.id)
       .then(({ data }) => {
-        if (data) setFavoriteIds(new Set(data.map((r: any) => r.target_user_id)));
+        if (data) setFavoriteIds(new Set(data.map((r: any) => r.liked_user_id)));
       });
   }, [user]);
 
@@ -252,20 +254,41 @@ export function DiscoverPage() {
     setLastSwipe(null);
   }, [lastSwipe, user, players]);
 
+  // Use a ref so handleFavorite always reads the latest favoriteIds without stale closure
+  const favoriteIdsRef = useRef(favoriteIds);
+  useEffect(() => { favoriteIdsRef.current = favoriteIds; }, [favoriteIds]);
+
   const handleFavorite = useCallback(async () => {
     const topPlayer = players.find(p => !swipedIds.has(p.id));
     if (!topPlayer || !user) return;
     const id = topPlayer.id;
-    if (favoriteIds.has(id)) {
+    const currentFavIds = favoriteIdsRef.current;
+    if (currentFavIds.has(id)) {
+      // Optimistic remove
       setFavoriteIds(prev => { const n = new Set(prev); n.delete(id); return n; });
-      await supabase.from('favorites')
-        .delete().eq('user_id', user.id).eq('target_user_id', id).eq('sport', topPlayer.sport);
+      const { error } = await (supabase.from('liked_players') as any)
+        .delete()
+        .eq('liker_id', user.id)
+        .eq('liked_user_id', id)
+        .eq('sport', topPlayer.sport);
+      if (error) {
+        console.error('Failed to unlike player:', error);
+        setFavoriteIds(prev => new Set([...prev, id])); // rollback
+      }
     } else {
+      // Optimistic add
       setFavoriteIds(prev => new Set([...prev, id]));
-      await (supabase.from('favorites') as any)
-        .insert({ user_id: user.id, target_user_id: id, sport: topPlayer.sport });
+      const { error } = await (supabase.from('liked_players') as any)
+        .upsert(
+          { liker_id: user.id, liked_user_id: id, sport: topPlayer.sport },
+          { onConflict: 'liker_id,liked_user_id,sport' },
+        );
+      if (error) {
+        console.error('Failed to like player:', error);
+        setFavoriteIds(prev => { const n = new Set(prev); n.delete(id); return n; }); // rollback
+      }
     }
-  }, [players, swipedIds, favoriteIds, user]);
+  }, [players, swipedIds, user]);
 
   // Register deck container as spotlight target for swipe_card step
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,7 +307,29 @@ export function DiscoverPage() {
       ? [EMMA_DISCOVER_PLAYER, ...players.filter(p => p.id !== EMMA_USER_ID)]
       : players;
 
-  const topPlayer = displayPlayers.find(p => !swipedIds.has(p.id));
+  const unswiped = displayPlayers.filter(p => !swipedIds.has(p.id));
+  const topPlayer = unswiped[0] ?? null;
+
+  // Shuffle: pick a random unswiped player (weighted by compatibility) and move to front
+  const handleShuffle = useCallback(() => {
+    if (unswiped.length <= 1) return;
+    // Exclude current top, pick randomly from the rest weighted by compatibilityScore
+    const pool = unswiped.slice(1);
+    const totalScore = pool.reduce((s, p) => s + p.compatibilityScore, 0);
+    let rand = Math.random() * totalScore;
+    let picked = pool[pool.length - 1];
+    for (const p of pool) {
+      rand -= p.compatibilityScore;
+      if (rand <= 0) { picked = p; break; }
+    }
+    setPlayers(prev => {
+      const without = prev.filter(p => p.id !== picked.id);
+      const insertAt = without.findIndex(p => !swipedIds.has(p.id));
+      const next = [...without];
+      next.splice(insertAt === -1 ? 0 : insertAt, 0, picked);
+      return next;
+    });
+  }, [unswiped, swipedIds]);
 
   if (!user && !isGuest) {
     return (
@@ -313,6 +358,7 @@ export function DiscoverPage() {
   return (
     <>
       <FilterTriptych
+        ref={filterRef}
         sport={sport} distanceKm={distKm} skill={skill}
         onSportChange={setSport}
         onDistanceChange={setDistKm}
@@ -333,9 +379,8 @@ export function DiscoverPage() {
       <InteractionBar
         onPass={() => topPlayer && handleSwipeLeft(topPlayer.id)}
         onConnect={() => topPlayer && handleSwipeRight(topPlayer.id)}
-        onUndo={handleUndo}
+        onShuffle={handleShuffle}
         onFavorite={handleFavorite}
-        canUndo={!!lastSwipe}
         isFavorited={!!topPlayer && favoriteIds.has(topPlayer.id)}
         disabled={!topPlayer}
       />
