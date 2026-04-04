@@ -26,11 +26,14 @@ interface CirclesListViewProps {
   onOpenChat: (item: ConversationItem) => void;
   onNewChat: (contactId: string, contactProfile: Profile) => void;
   scrollContainerRef: React.RefObject<HTMLDivElement>;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  loadingMore: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function CirclesListView({ conversations, loading, error, onOpenChat, onNewChat, scrollContainerRef }: CirclesListViewProps) {
+export function CirclesListView({ conversations, loading, error, onOpenChat, onNewChat, scrollContainerRef, hasMore, loadMore, loadingMore }: CirclesListViewProps) {
   const { profile, isGuest } = useAuth();
   const { tutorialStep } = useGuestTutorial();
   const [activeTab, setActiveTab] = useState<CirclesTab>('dms');
@@ -40,6 +43,7 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreateBroadcast, setShowCreateBroadcast] = useState(false);
   const [allContacts, setAllContacts] = useState<Profile[]>([]);
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
   // ── ID-based search state ────────────────────────────────────────────────
   const [idResult, setIdResult] = useState<Profile | null>(null);
@@ -92,6 +96,24 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
         setAllContacts(profiles);
       });
   }, [profile]);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    if (!loadMoreTriggerRef.current || loading || loadingMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    observer.observe(loadMoreTriggerRef.current);
+
+    return () => observer.disconnect();
+  }, [hasMore, loadMore, loadingMore, loading]);
 
   const q = searchQuery.trim().toLowerCase();
   const isIdSearch = searchQuery.trim().startsWith('#');
@@ -390,6 +412,15 @@ export function CirclesListView({ conversations, loading, error, onOpenChat, onN
               </button>
             ))}
           </>
+        )}
+
+        {/* ── Lazy loading trigger and indicator ───────────────────────── */}
+        {!loading && !error && !isIdSearch && activeTab !== 'broadcast' && hasMore && (
+          <div ref={loadMoreTriggerRef} style={{ padding: '16px 0', display: 'flex', justifyContent: 'center' }}>
+            {loadingMore && (
+              <div style={{ width: 20, height: 20, border: '2.5px solid var(--color-bdr)', borderTopColor: 'var(--color-acc)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            )}
+          </div>
         )}
       </div>
 

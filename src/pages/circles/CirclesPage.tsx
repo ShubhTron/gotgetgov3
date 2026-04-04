@@ -137,7 +137,7 @@ export function CirclesPage() {
   const targetConversationId = (location.state as { openConversationId?: string } | null)?.openConversationId;
   
   const [screen, setScreen] = useState<CirclesScreen>({ view: 'list' });
-  const { conversations, loading, error, markAsRead, refetch } = useConversations();
+  const { conversations, loading, error, markAsRead, refetch, hasMore, loadMore, loadingMore } = useConversations();
   const { user, isGuest } = useAuth();
   const { tutorialStep, advanceTutorial } = useGuestTutorial();
   const { setHideNav } = useNavVisibility();
@@ -615,6 +615,9 @@ export function CirclesPage() {
                     onOpenChat={openChat}
                     onNewChat={handleNewChat}
                     scrollContainerRef={circlesScrollRef}
+                    hasMore={hasMore}
+                    loadMore={loadMore}
+                    loadingMore={loadingMore}
                   />
                 </motion.div>
               )}

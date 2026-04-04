@@ -11,6 +11,9 @@ interface CirclesViewProps {
   onOpenChat: (item: ConversationItem) => void;
   onNewChat: (contactId: string, contactProfile: Profile) => void;
   scrollContainerRef: React.RefObject<HTMLDivElement>;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  loadingMore: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -22,6 +25,9 @@ export function CirclesView({
   onOpenChat,
   onNewChat,
   scrollContainerRef,
+  hasMore,
+  loadMore,
+  loadingMore,
 }: CirclesViewProps) {
   return (
     <div
@@ -39,6 +45,9 @@ export function CirclesView({
         onOpenChat={onOpenChat}
         onNewChat={onNewChat}
         scrollContainerRef={scrollContainerRef}
+        hasMore={hasMore}
+        loadMore={loadMore}
+        loadingMore={loadingMore}
       />
     </div>
   );

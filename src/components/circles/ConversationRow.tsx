@@ -1,7 +1,7 @@
 import React from 'react';
 import { Avatar } from '../../design-system';
 import type { ConversationItem } from '../../types/circles';
-import { SPORT_CARD_PREFIX } from '../../types/circles';
+import { SPORT_CARD_PREFIX, MATCH_PROPOSAL_PREFIX, ATTACHMENT_PREFIX } from '../../types/circles';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -28,6 +28,8 @@ function formatTimestamp(iso: string): string {
 function getPreviewText(content: string | undefined | null): string {
   if (!content) return '';
   if (content.startsWith(SPORT_CARD_PREFIX)) return '🎾 Training goal';
+  if (content.startsWith(MATCH_PROPOSAL_PREFIX)) return 'Match proposal';
+  if (content.startsWith(ATTACHMENT_PREFIX)) return '📎 Attachment';
   return content.length > 60 ? content.slice(0, 60) + '…' : content;
 }
 

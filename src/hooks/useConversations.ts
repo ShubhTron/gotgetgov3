@@ -20,6 +20,9 @@ export interface UseConversationsReturn {
   error: string | null;
   refetch: () => void;
   markAsRead: (conversationId: string) => Promise<void>;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  loadingMore: boolean;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -37,6 +40,8 @@ export function useConversations(): UseConversationsReturn {
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Track which conversation is currently "open" so we don't increment
   // unread for messages arriving in the active chat.
@@ -188,6 +193,12 @@ export function useConversations(): UseConversationsReturn {
     }
   }, [user]);
 
+  // ─── Load more (no-op for now, keeping for interface compatibility) ──────
+
+  const loadMore = useCallback(async () => {
+    // No-op: all conversations loaded at once
+  }, []);
+
   // ─── Mark as read ─────────────────────────────────────────────────────────
 
   const markAsRead = useCallback(
@@ -274,5 +285,14 @@ export function useConversations(): UseConversationsReturn {
     };
   }, [user, fetchConversations]);
 
-  return { conversations, loading, error, refetch: fetchConversations, markAsRead };
+  return { 
+    conversations, 
+    loading, 
+    error, 
+    refetch: fetchConversations, 
+    markAsRead,
+    hasMore,
+    loadMore,
+    loadingMore,
+  };
 }

@@ -16,6 +16,13 @@ export function ELOStrip({ eloChange, currentElo, sparklineData }: ELOStripProps
   const generateSparklinePath = (data: number[]): string => {
     if (data.length === 0) return '';
     
+    // Handle single data point
+    if (data.length === 1) {
+      const x = width / 2;
+      const y = height / 2;
+      return `M ${x},${y} L ${x},${y}`;
+    }
+    
     const min = Math.min(...data);
     const max = Math.max(...data);
     const range = max - min || 1; // Avoid division by zero
@@ -23,6 +30,12 @@ export function ELOStrip({ eloChange, currentElo, sparklineData }: ELOStripProps
     const points = data.map((value, index) => {
       const x = padding + (index / (data.length - 1)) * (width - 2 * padding);
       const y = height - padding - ((value - min) / range) * (height - 2 * padding);
+      
+      // Ensure no NaN values
+      if (isNaN(x) || isNaN(y)) {
+        return `${width / 2},${height / 2}`;
+      }
+      
       return `${x},${y}`;
     });
     
