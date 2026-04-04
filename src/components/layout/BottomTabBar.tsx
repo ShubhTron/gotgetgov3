@@ -10,7 +10,7 @@ interface BottomTabBarProps {
   onCreateClick?: () => void;
 }
 
-const tabIcons: Record<TabId, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+const tabIcons: Record<TabId, React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
   discover: Compass,
   news: Newspaper,
   schedule: Calendar,
