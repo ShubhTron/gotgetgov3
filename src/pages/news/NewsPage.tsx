@@ -176,16 +176,9 @@ export function NewsPage() {
 /* ── FeedCard ──────────────────────────────────────────────────────────── */
 function FeedCard({ item }: { item: FeedItem }) {
   const [liked, setLiked] = useState(false);
-  const config = categoryConfig[item.type] || { label: 'Update', accent: 'rgba(255,255,255,0.18)' };
+  const config = categoryConfig[item.type] || { label: 'Update', accent: 'var(--color-bdr-s)' };
 
-  const gradient = (() => {
-    switch (item.type) {
-      case 'event':           return 'linear-gradient(160deg,rgba(22,212,106,0.75) 0%,rgba(8,80,44,0.95) 100%)';
-      case 'match_result':    return 'linear-gradient(160deg,rgba(16,180,90,0.6) 0%,rgba(5,40,20,0.95) 100%)';
-      case 'ladder_movement': return 'linear-gradient(160deg,rgba(139,92,246,0.75) 0%,rgba(45,15,100,0.95) 100%)';
-      default:                return 'linear-gradient(160deg,rgba(50,50,60,0.8) 0%,rgba(10,10,15,0.97) 100%)';
-    }
-  })();
+  const hasImage = !!item.imageUrl;
 
   const headline = (() => {
     if (item.type === 'match_result' && item.metadata)
@@ -201,66 +194,80 @@ function FeedCard({ item }: { item: FeedItem }) {
     return item.title || '';
   })();
 
+  const textColor = hasImage ? '#fff' : 'var(--color-t1)';
+  const textMuted = hasImage ? 'rgba(255,255,255,0.8)' : 'var(--color-t2)';
+  const textSubtle = hasImage ? 'rgba(255,255,255,0.65)' : 'var(--color-t3)';
+  const borderSubtle = hasImage ? 'rgba(255,255,255,0.15)' : 'var(--color-bdr)';
+  const badgeBg = hasImage ? config.accent : 'var(--color-surf-2)';
+  const badgeBorder = hasImage ? 'rgba(255,255,255,0.2)' : 'var(--color-bdr)';
+  const badgeText = hasImage ? '#fff' : 'var(--color-t2)';
+
   return (
     <div style={{
       position: 'relative', overflow: 'hidden',
       borderRadius: 18,
-      minHeight: 300,
-      background: '#111',
-      boxShadow: '0 6px 28px rgba(0,0,0,0.35)',
+      minHeight: hasImage ? 300 : 'auto',
+      background: hasImage ? '#111' : 'var(--color-surf)',
+      border: hasImage ? 'none' : '1px solid var(--color-bdr)',
+      padding: hasImage ? 0 : '16px 18px',
+      boxShadow: hasImage ? '0 6px 28px rgba(0,0,0,0.35)' : '0 4px 12px rgba(0,0,0,0.03)',
     }}>
-      {/* Background */}
-      {item.imageUrl
-        ? <img src={item.imageUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-        : <div style={{ position: 'absolute', inset: 0, background: gradient }} />
-      }
-
-      {/* Dark gradient overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.1) 100%)', pointerEvents: 'none' }} />
+      {/* Background & Overlays (ONLY if image) */}
+      {hasImage && (
+        <>
+          <img src={item.imageUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.1) 100%)', pointerEvents: 'none' }} />
+        </>
+      )}
 
       {/* Category badge */}
-      <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 10 }}>
+      <div style={{ position: hasImage ? 'absolute' : 'relative', top: hasImage ? 14 : 0, left: hasImage ? 14 : 0, zIndex: 10, marginBottom: hasImage ? 0 : 16 }}>
         <div style={{
           padding: '5px 12px', borderRadius: 99,
-          background: config.accent,
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.2)',
+          background: badgeBg,
+          backdropFilter: hasImage ? 'blur(10px)' : 'none',
+          border: `1px solid ${badgeBorder}`,
           display: 'inline-flex', alignItems: 'center',
         }}>
-          <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 11, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 11, color: badgeText, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             {config.label}
           </span>
         </div>
       </div>
 
-      {/* Bottom content */}
-      <div style={{ position: 'absolute', inset: 'auto 0 0 0', padding: '20px 18px 16px', zIndex: 10, color: '#fff' }}>
+      {/* Content wrapper */}
+      <div style={{ position: hasImage ? 'absolute' : 'relative', inset: hasImage ? 'auto 0 0 0' : 'auto', padding: hasImage ? '20px 18px 16px' : 0, zIndex: 10, color: textColor }}>
 
         {/* Headline */}
         {headline && (
           <h2 style={{
             fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700,
             margin: '0 0 14px', lineHeight: 1.25,
-            textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+            textShadow: hasImage ? '0 1px 4px rgba(0,0,0,0.5)' : 'none',
           }}>
             {headline}
           </h2>
         )}
         {item.type === 'announcement' && item.content && (
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: '-8px 0 14px', lineHeight: 1.4 }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: textMuted, margin: '-8px 0 14px', lineHeight: 1.4 }}>
             {item.content}
           </p>
         )}
 
         {/* Author row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <MiniAvatar name={item.author.name} avatarUrl={item.author.avatarUrl} />
+          {hasImage 
+            ? <MiniAvatar name={item.author.name} avatarUrl={item.author.avatarUrl} />
+            : <div style={{width: 36, height: 36, borderRadius: '50%', background: 'var(--color-surf-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
+                {item.author.avatarUrl ? <img src={item.author.avatarUrl} style={{width:'100%', height:'100%', objectFit:'cover'}} alt=""/> : <span style={{fontSize: 13, fontWeight: 700, color: 'var(--color-t2)', fontFamily: 'var(--font-body)'}}>{getInitials(item.author.name)}</span>}
+              </div>
+          }
           <div>
-            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, display: 'block', color: '#fff' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, display: 'block', color: textColor }}>
               {item.author.name}
             </span>
             {item.audienceLabel && (
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: textSubtle }}>
                 {item.audienceLabel}
               </span>
             )}
@@ -268,25 +275,25 @@ function FeedCard({ item }: { item: FeedItem }) {
         </div>
 
         {/* Action bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 22, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22, paddingTop: 12, borderTop: `1px solid ${borderSubtle}` }}>
           <button
             onClick={() => setLiked((v) => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: liked ? '#f472b6' : 'rgba(255,255,255,0.85)', transition: 'color 0.2s', padding: 0 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: liked ? 'var(--color-red)' : textMuted, transition: 'color 0.2s', padding: 0 }}
           >
-            <Heart size={19} fill={liked ? '#f472b6' : 'none'} />
+            <Heart size={19} fill={liked ? 'var(--color-red)' : 'none'} color={liked ? 'var(--color-red)' : textMuted} />
             <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13 }}>
               {item.reactions.like + (liked ? 1 : 0)}
             </span>
           </button>
 
-          <button style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.85)', padding: 0 }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 0 }}>
             <MessageCircle size={19} />
             {item.comments > 0 && (
               <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13 }}>{item.comments}</span>
             )}
           </button>
 
-          <button style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.85)', padding: 0, marginLeft: 'auto' }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: textMuted, padding: 0, marginLeft: 'auto' }}>
             <Share2 size={19} />
             <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13 }}>Share</span>
           </button>

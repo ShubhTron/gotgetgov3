@@ -55,18 +55,19 @@ export function LandingPage() {
           position: absolute; inset: 0;
           background-image: url(/pickleball-paddle-court.webp);
           background-size: cover; background-position: center;
-          filter: blur(12px) saturate(0.3) brightness(0.2);
+          filter: blur(12px);
+          opacity: 0.15;
           transform: scale(1.08);
         }
         .lp-hero-gradient {
           position: absolute; inset: 0;
           background:
-            radial-gradient(ellipse 80% 50% at 50% 0%, rgba(22,212,106,0.12) 0%, transparent 65%),
-            linear-gradient(180deg, rgba(17,16,9,0.3) 0%, rgba(17,16,9,0.7) 50%, var(--color-bg) 100%);
+            radial-gradient(ellipse 80% 50% at 50% 0%, var(--color-acc-bg) 0%, transparent 65%),
+            linear-gradient(180deg, transparent 0%, transparent 70%, var(--color-bg) 100%);
         }
         .lp-green-orb {
           position: absolute; border-radius: 50%; pointer-events: none;
-          background: radial-gradient(circle, rgba(22,212,106,0.18) 0%, transparent 70%);
+          background: radial-gradient(circle, var(--color-acc-bg) 0%, transparent 70%);
           filter: blur(48px);
         }
         .lp-divider {
