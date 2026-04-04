@@ -47,9 +47,9 @@ export function ImageUpload({ value, name, onChange, onOpenChange, size = 'xl', 
 
   return (
     <div className={cn('relative inline-block', className)}>
-      <Avatar className={getAvatarSizeClass(size)}>
+      <Avatar className={cn(getAvatarSizeClass(size), 'ring-2 ring-[var(--color-bdr)] bg-[var(--color-surf-2)]')}>
         <AvatarImage src={value || undefined} alt={name} />
-        <AvatarFallback>{getInitials(name || '?')}</AvatarFallback>
+        <AvatarFallback className="bg-[var(--color-surf-2)] text-[var(--color-t2)] text-lg font-medium border-2 border-[var(--color-bdr)]">{getInitials(name || '?')}</AvatarFallback>
       </Avatar>
       <button
         type="button"

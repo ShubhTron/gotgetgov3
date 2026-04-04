@@ -32,8 +32,8 @@ export function CreateMenu({ isOpen, onClose, onSelect }: CreateMenuProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-40 lg:hidden"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
+            className="fixed inset-0 lg:hidden"
+            style={{ zIndex: 105, background: 'rgba(0,0,0,0.6)' }}
             onClick={onClose}
           />
 
@@ -43,13 +43,15 @@ export function CreateMenu({ isOpen, onClose, onSelect }: CreateMenuProps) {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
+            className="fixed left-0 right-0 lg:hidden"
             style={{
+              zIndex: 120,
+              bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
               background: 'var(--color-surf)',
               borderRadius: '20px 20px 0 0',
               borderTop: '1px solid var(--color-bdr)',
-              maxHeight: '90dvh', overflow: 'hidden',
-              paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
+              maxHeight: '70dvh', overflow: 'hidden',
+              paddingBottom: 20,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px' }}>

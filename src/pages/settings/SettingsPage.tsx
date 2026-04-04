@@ -6,6 +6,7 @@ import {
   FileText, Star, ChevronRight, Copy, Check, Globe,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useThemeContext } from '../../contexts/ThemeContext';
 import { SettingsRow } from '../../components/me/SettingsRow';
 import { Avatar } from '../../design-system';
 import { formatUserIdForDisplay } from '../../lib/userId';
@@ -44,9 +45,10 @@ function Divider() {
 export function SettingsPage() {
   const navigate = useNavigate();
   const { user, profile, signOut, updateProfile } = useAuth();
+  const { theme, setTheme } = useThemeContext();
 
   // Toggles derived from profile
-  const [darkMode,      setDarkMode]      = useState(profile?.dark_mode ?? false);
+  const darkMode = theme === 'dark';
   const [pushNotifs,    setPushNotifs]    = useState(profile?.push_notifications ?? true);
   const [emailNotifs,   setEmailNotifs]   = useState(profile?.email_notifications ?? true);
   const [matchReminders, setMatchReminders] = useState(true);
@@ -60,9 +62,8 @@ export function SettingsPage() {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   async function handleDarkMode(next: boolean) {
-    setDarkMode(next);
+    setTheme(next ? 'dark' : 'light');
     await updateProfile({ dark_mode: next });
-    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
   }
 
   async function handlePushNotifs(next: boolean) {
