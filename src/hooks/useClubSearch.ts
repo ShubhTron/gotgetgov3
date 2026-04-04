@@ -63,7 +63,8 @@ export function useClubSearch(
     if (!trimmed) {
       let cancelled = false;
       setLoading(true);
-      supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any)
         .from('clubs')
         .select('id, name, city, state, logo_url, cover_image_url, location_lat, location_lng')
         .eq('source', 'paddlescores')
