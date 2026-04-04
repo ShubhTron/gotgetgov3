@@ -61,6 +61,7 @@ export function useClubSearch(
 
     // ── No query: show nearby paddlescores clubs ──────────────────────────────
     if (!trimmed) {
+      let cancelled = false;
       setLoading(true);
       supabase
         .from('clubs')
@@ -71,7 +72,9 @@ export function useClubSearch(
         .gte('location_lng', lng - CLUB_SEARCH_RADIUS_DEG)
         .lte('location_lng', lng + CLUB_SEARCH_RADIUS_DEG)
         .limit(20)
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (cancelled) return;
+          if (error) console.error('Club proximity search error:', error);
           const sorted = (data ?? []).slice().sort((a, b) => {
             const dA = Math.abs((a.location_lat ?? 0) - lat) + Math.abs((a.location_lng ?? 0) - lng);
             const dB = Math.abs((b.location_lat ?? 0) - lat) + Math.abs((b.location_lng ?? 0) - lng);
@@ -80,7 +83,7 @@ export function useClubSearch(
           setResults(sorted.map(toSelectedClub));
           setLoading(false);
         });
-      return;
+      return () => { cancelled = true; };
     }
 
     // ── Query typed: Supabase name search + Google Maps ───────────────────────
