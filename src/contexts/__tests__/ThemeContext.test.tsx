@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { ThemeProvider, useThemeContext } from '../ThemeContext';
 
 vi.mock('../../hooks/useSystemTheme', () => ({
   useSystemTheme: () => ({ systemTheme: 'dark', isSupported: true }),
 }));
 
-function wrapper({ children }: { children: React.ReactNode }) {
+function wrapper({ children }: { children: ReactNode }) {
   return <ThemeProvider>{children}</ThemeProvider>;
 }
 
