@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { GuestTutorialProvider } from './contexts/GuestTutorialContext';
 import { TutorialSpotlight } from './components/tutorial/TutorialSpotlight';
@@ -76,16 +77,18 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <GuestTutorialProvider>
-          <FilterProvider>
-            <FullscreenProvider>
-              <AppRoutes />
-              <TutorialSpotlight />
-            </FullscreenProvider>
-          </FilterProvider>
-        </GuestTutorialProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <GuestTutorialProvider>
+            <FilterProvider>
+              <FullscreenProvider>
+                <AppRoutes />
+                <TutorialSpotlight />
+              </FullscreenProvider>
+            </FilterProvider>
+          </GuestTutorialProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
