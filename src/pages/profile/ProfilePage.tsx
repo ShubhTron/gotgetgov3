@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { SportType, LikedPlayer } from '@/types/database';
 import { fetchPendingScoreMatches } from '@/lib/scoring';
-import { useTheme } from '@/hooks/useTheme';
+import { useThemeContext } from '@/contexts/ThemeContext';
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ function MiniStatCard({
 export function ProfilePage() {
   const navigate = useNavigate();
   const { profile, user, signOut, updateProfile } = useAuth();
-  const { theme, toggle } = useTheme();
+  const { theme, toggle } = useThemeContext();
   const isDark = theme === 'dark';
 
   const [uploading, setUploading] = useState(false);
