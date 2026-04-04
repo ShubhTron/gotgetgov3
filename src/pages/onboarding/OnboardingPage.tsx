@@ -284,36 +284,6 @@ interface StepProps {
   setData: React.Dispatch<React.SetStateAction<OnboardingData>>;
 }
 
-function useGoogleMaps(): { ready: boolean } {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-    if (!key) return;
-
-    const src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
-
-    // Avoid appending if script already exists
-    if (!document.querySelector(`script[src="${src}"]`)) {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      document.head.appendChild(script);
-    }
-
-    // Poll until window.google?.maps is available
-    const interval = setInterval(() => {
-      if ((window as Window & typeof globalThis & { google?: { maps?: unknown } }).google?.maps) {
-        setReady(true);
-        clearInterval(interval);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return { ready };
-}
 
 export function OnboardingPage() {
   const navigate = useNavigate();
@@ -1339,7 +1309,6 @@ function CoachLessonsStep({ data, setData }: StepProps) {
 }
 
 function LocationClubStep({ data, setData, user }: CoachStepProps) {
-  const { ready } = useGoogleMaps();
   const [query, setQuery] = useState('');
   const [selectedClub, setSelectedClub] = useState<SelectedClubWithRole | null>(null);
   const [membershipRole, setMembershipRole] = useState<ClubRole>('player');
@@ -1464,12 +1433,6 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
         </p>
       )}
 
-      {!ready && (
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--color-t2)', margin: 0 }}>
-          Search unavailable
-        </p>
-      )}
-
       {loading && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
           <div className="ob-spinner" />
@@ -1482,7 +1445,7 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
             <button
               key={club.id}
               className="ob-club-result"
-              onClick={() => setSelectedClub(club)}
+              onClick={() => setSelectedClub(club as SelectedClubWithRole)}
             >
               {club.name}
             </button>
