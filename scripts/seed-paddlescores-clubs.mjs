@@ -17,31 +17,41 @@ const clubs = JSON.parse(
 );
 
 async function geocode(name) {
-  const query = encodeURIComponent(`${name} Westchester NY`);
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${API_KEY}`;
-  const res = await fetch(url);
-  const data = await res.json();
+  try {
+    const query = encodeURIComponent(`${name} Westchester NY`);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
 
-  if (data.status !== 'OK' || !data.results.length) {
-    console.warn(`  ⚠ Could not geocode: ${name} (status: ${data.status})`);
+    if (data.status !== 'OK' || !data.results.length) {
+      console.warn(`  ⚠ Could not geocode: ${name} (status: ${data.status})`);
+      return null;
+    }
+
+    const result = data.results[0];
+    const { lat, lng } = result.geometry.location;
+    let city = null;
+    let state = null;
+
+    for (const comp of result.address_components) {
+      if (comp.types.includes('locality')) city = comp.long_name;
+      if (comp.types.includes('administrative_area_level_1')) state = comp.short_name;
+    }
+
+    return { lat, lng, city, state, address: result.formatted_address };
+  } catch (err) {
+    console.warn(`  ⚠ Network error geocoding: ${name} — ${err.message}`);
     return null;
   }
-
-  const result = data.results[0];
-  const { lat, lng } = result.geometry.location;
-  let city = null;
-  let state = null;
-
-  for (const comp of result.address_components) {
-    if (comp.types.includes('locality')) city = comp.long_name;
-    if (comp.types.includes('administrative_area_level_1')) state = comp.short_name;
-  }
-
-  return { lat, lng, city, state, address: result.formatted_address };
 }
 
 function escape(s) {
   return (s ?? '').replace(/'/g, "''");
+}
+
+function sqlVal(s) {
+  if (s === null || s === undefined || s === '') return 'NULL';
+  return `'${escape(s)}'`;
 }
 
 const inserts = [];
@@ -52,16 +62,16 @@ for (const name of clubs) {
 
   inserts.push(
     `INSERT INTO clubs (name, address, city, state, location_lat, location_lng, source, sports)\n` +
-    `SELECT '${escape(name)}', '${escape(geo.address)}', '${escape(geo.city)}', '${escape(geo.state)}',\n` +
+    `SELECT '${escape(name)}', '${escape(geo.address)}', ${sqlVal(geo.city)}, ${sqlVal(geo.state)},\n` +
     `       ${geo.lat}, ${geo.lng}, 'paddlescores', '{platform_tennis}'\n` +
     `WHERE NOT EXISTS (\n` +
-    `  SELECT 1 FROM clubs WHERE name = '${escape(name)}' AND city = '${escape(geo.city)}'\n` +
+    `  SELECT 1 FROM clubs WHERE name = '${escape(name)}' AND city = ${sqlVal(geo.city)}\n` +
     `);\n`
   );
 
   console.log(`  ✓ ${name} → ${geo.city}, ${geo.state} (${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)})`);
 
-  // Respect Google's rate limit (50 req/s free tier)
+  // Conservative rate limit — 5 req/s well under Google's 50 req/s free tier
   await new Promise(r => setTimeout(r, 200));
 }
 
