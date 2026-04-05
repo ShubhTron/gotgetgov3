@@ -14,7 +14,6 @@ export interface SelectedClub {
 }
 
 const CLUB_SEARCH_RADIUS_DEG = 0.5; // ~55 km bounding box
-const CLUB_SEARCH_RADIUS_M = 25000;
 
 function toSelectedClub(row: {
   id: string;
@@ -87,7 +86,7 @@ export function useClubSearch(
       return () => { cancelled = true; };
     }
 
-    // ── Query typed: Supabase name search + Google Maps ───────────────────────
+    // ── Query typed: Supabase name search ──────────────────────────────────────
     setLoading(true);
 
     const timer = setTimeout(async () => {
@@ -98,58 +97,11 @@ export function useClubSearch(
           .ilike('name', `%${trimmed}%`)
           .limit(10);
 
-        const supabaseResults = (dbClubs ?? []).map(toSelectedClub);
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const g = (window as any).google;
-        if (!g?.maps?.places) {
-          setResults(supabaseResults);
-          setLoading(false);
-          return;
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mapsApi = g.maps as any;
-        const service = new mapsApi.places.PlacesService(document.createElement('div'));
-        const keyword = sports.length ? sports.join(' ') : 'tennis paddle';
-
-        service.nearbySearch(
-          {
-            location: new mapsApi.LatLng(lat, lng),
-            radius: CLUB_SEARCH_RADIUS_M,
-            keyword: `${trimmed} ${keyword}`,
-            type: 'establishment',
-          },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (places: any[] | null, status: string) => {
-            const mapsResults: SelectedClub[] = [];
-            if (status === mapsApi.places.PlacesServiceStatus.OK && places) {
-              const existingNames = new Set(
-                supabaseResults.map(c => c.name.toLowerCase())
-              );
-              for (const place of places) {
-                const name = (place.name ?? '') as string;
-                if (!existingNames.has(name.toLowerCase())) {
-                  mapsResults.push({
-                    id: place.place_id ?? '',
-                    name,
-                    city: null,
-                    state: null,
-                    logo_url: null,
-                    cover_image_url: null,
-                    location_lat: place.geometry?.location?.lat() ?? null,
-                    location_lng: place.geometry?.location?.lng() ?? null,
-                  });
-                }
-              }
-            }
-            setResults([...supabaseResults, ...mapsResults]);
-            setLoading(false);
-          }
-        );
+        setResults((dbClubs ?? []).map(toSelectedClub));
       } catch (err) {
         console.error('Club search error:', err);
         setResults([]);
+      } finally {
         setLoading(false);
       }
     }, 350);
