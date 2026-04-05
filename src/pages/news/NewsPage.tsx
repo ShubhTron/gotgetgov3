@@ -164,7 +164,12 @@ export function NewsPage() {
       </div>
 
       {/* ── Feed ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 14px' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 380px), 1fr))',
+        gap: 16,
+        padding: '0 14px',
+      }}>
         {filteredFeed.map((item) => (
           <FeedCard key={item.id} item={item} />
         ))}
@@ -206,7 +211,8 @@ function FeedCard({ item }: { item: FeedItem }) {
     <div style={{
       position: 'relative', overflow: 'hidden',
       borderRadius: 18,
-      minHeight: hasImage ? 300 : 'auto',
+      minHeight: hasImage ? 260 : 'auto',
+      height: hasImage ? 260 : 'auto',
       background: hasImage ? '#111' : 'var(--color-surf)',
       border: hasImage ? 'none' : '1px solid var(--color-bdr)',
       padding: hasImage ? 0 : '16px 18px',
