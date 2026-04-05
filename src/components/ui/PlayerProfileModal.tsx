@@ -98,7 +98,7 @@ export function PlayerProfileModal({
           </div>
         </div>
 
-        <div style={{ paddingTop: 56, paddingBottom: 24, paddingLeft: 24, paddingRight: 24 }}>
+        <div style={{ paddingTop: 56, paddingBottom: 24, paddingLeft: 24, paddingRight: 24, maxWidth: 560, width: '100%' }}>
           {loading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
               <div style={{ width: 32, height: 32, border: '4px solid var(--color-acc)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />

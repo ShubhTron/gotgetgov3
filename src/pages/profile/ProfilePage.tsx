@@ -203,20 +203,32 @@ export function ProfilePage() {
       }}
     >
       <PageContainer style={{ display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        .profile-hero {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 24px 20px 16px;
+          gap: 12px;
+        }
+        @media (min-width: 1024px) {
+          .profile-hero {
+            flex-direction: row;
+            align-items: center;
+            text-align: left;
+            gap: 24px;
+          }
+          .profile-hero-info {
+            align-items: flex-start !important;
+          }
+        }
+      `}</style>
+
       {/* ── A. Profile Hero ─────────────────────────────────────────────────── */}
-      <div
-        style={{
-          padding: 'var(--space-5)',
-          paddingTop: 'var(--space-6)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 'var(--space-3)',
-          textAlign: 'center',
-        }}
-      >
+      <div className="profile-hero">
         {/* Avatar with green ring */}
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div style={{ position: 'relative', display: 'inline-block', flexShrink: 0 }}>
           <ImageUpload
             value={profile?.avatar_url}
             name={profile?.full_name || 'User'}
@@ -261,88 +273,89 @@ export function ProfilePage() {
           )}
         </div>
 
-        {/* Name */}
-        <div
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'var(--text-3xl)',
-            fontWeight: 'var(--weight-bold)',
-            letterSpacing: 'var(--tracking-tight)',
-            color: 'var(--color-t1)',
-            lineHeight: 'var(--leading-tight)',
-          }}
-        >
-          {profile?.full_name || 'Your Name'}
-        </div>
-
-        {/* Unique ID pill */}
-        <button
-          onClick={handleCopyId}
-          title="Copy your unique ID"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '4px 12px',
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--color-surf)',
-            border: '1px solid var(--color-bdr)',
-            cursor: 'pointer',
-            color: copied ? 'var(--color-acc)' : 'var(--color-t3)',
-            fontFamily: 'var(--font-body)', fontWeight: 700,
-            fontSize: 12, letterSpacing: '0.06em',
-            transition: 'color 0.2s',
-            marginTop: 4,
-          }}
-        >
-          {copied
-            ? <Check size={12} strokeWidth={3} />
-            : <Copy size={12} />
-          }
-          {copied ? 'Copied!' : shortId}
-        </button>
-
-        {/* Location */}
-        {location && (
+        <div className="profile-hero-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          {/* Name */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-1)',
-              color: 'var(--color-t2)',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-3xl)',
+              fontWeight: 'var(--weight-bold)',
+              letterSpacing: 'var(--tracking-tight)',
+              color: 'var(--color-t1)',
+              lineHeight: 'var(--leading-tight)',
             }}
           >
-            <MapPin size={13} style={{ flexShrink: 0 }} />
-            <span
+            {profile?.full_name || 'Your Name'}
+          </div>
+
+          {/* Unique ID pill */}
+          <button
+            onClick={handleCopyId}
+            title="Copy your unique ID"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '4px 12px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--color-surf)',
+              border: '1px solid var(--color-bdr)',
+              cursor: 'pointer',
+              color: copied ? 'var(--color-acc)' : 'var(--color-t3)',
+              fontFamily: 'var(--font-body)', fontWeight: 700,
+              fontSize: 12, letterSpacing: '0.06em',
+              transition: 'color 0.2s',
+            }}
+          >
+            {copied
+              ? <Check size={12} strokeWidth={3} />
+              : <Copy size={12} />
+            }
+            {copied ? 'Copied!' : shortId}
+          </button>
+
+          {/* Location */}
+          {location && (
+            <div
               style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 'var(--weight-medium)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-1)',
+                color: 'var(--color-t2)',
               }}
             >
-              {location}
-            </span>
-          </div>
-        )}
+              <MapPin size={13} style={{ flexShrink: 0 }} />
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 'var(--weight-medium)',
+                }}
+              >
+                {location}
+              </span>
+            </div>
+          )}
 
-        {/* Edit Profile pill */}
-        <button
-          onClick={() => navigate('/settings')}
-          style={{
-            marginTop: 'var(--space-1)',
-            padding: 'var(--space-2) var(--space-6)',
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--color-t1)',
-            color: 'var(--color-bg)',
-            border: 'none',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-body)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 'var(--weight-semibold)',
-            letterSpacing: 'var(--tracking-wide)',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
-          Edit Profile
-        </button>
+          {/* Edit Profile pill */}
+          <button
+            onClick={() => navigate('/settings')}
+            style={{
+              marginTop: 'var(--space-1)',
+              padding: 'var(--space-2) var(--space-6)',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--color-t1)',
+              color: 'var(--color-bg)',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
+              letterSpacing: 'var(--tracking-wide)',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            Edit Profile
+          </button>
+        </div>
       </div>
 
       {/* ── B. Performance Sync ──────────────────────────────────────────────── */}
