@@ -31,11 +31,22 @@ export function InteractionBar({
   return (
     <div style={{
       position: 'fixed',
-      bottom: 'calc(83px + 10px)',
-      left: 'var(--space-5)', right: 'var(--space-5)',
+      bottom: 'calc(var(--interaction-bar-bottom, 83px) + 10px)',
+      left: 0,
+      right: 0,
       zIndex: 100,
-      display: 'flex', alignItems: 'center', gap: 10,
+      display: 'flex',
+      justifyContent: 'center',
+      padding: '0 var(--space-5)',
     }}>
+      {/* Inner row — constrained to match swipe deck max-width */}
+      <div style={{
+        width: '100%',
+        maxWidth: 480,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+      }}>
       {/* Undo */}
       <motion.button
         style={{ ...circleBtn, opacity: canUndo && !disabled ? 1 : 0.38, cursor: canUndo && !disabled ? 'pointer' : 'not-allowed' }}
@@ -118,6 +129,7 @@ export function InteractionBar({
           style={{ color: 'var(--color-acc-dk)' }}
         />
       </motion.button>
+      </div>
     </div>
   );
 }

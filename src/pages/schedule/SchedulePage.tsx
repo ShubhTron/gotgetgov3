@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarDays, Clock, MapPin,
@@ -317,7 +318,8 @@ export function SchedulePage() {
 
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg)', paddingBottom: 148 }}>
+    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg)', paddingBottom: 'var(--page-pb)' as any }}>
+      <PageContainer>
 
       {/* ── Greeting ───────────────────────────────────────────────────────── */}
       <div style={{ padding: 'var(--space-5) var(--space-5) var(--space-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -560,6 +562,7 @@ export function SchedulePage() {
           eventSummary={calendarPromptData.summary}
         />
       )}
+      </PageContainer>
     </div>
   );
 }

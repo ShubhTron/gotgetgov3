@@ -365,15 +365,17 @@ export function DiscoverPage() {
         onSkillChange={setSkill}
       />
 
-      <div ref={deckRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <SwipeDeck
-          players={displayPlayers}
-          onSwipeRight={handleSwipeRight}
-          onSwipeLeft={handleSwipeLeft}
-          undoId={undoId}
-          triggerSwipe={triggerSwipe}
-          onReset={isGuest ? resetTutorial : undefined}
-        />
+      <div ref={deckRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, alignItems: 'center' }}>
+        <div style={{ width: '100%', maxWidth: 480, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <SwipeDeck
+            players={displayPlayers}
+            onSwipeRight={handleSwipeRight}
+            onSwipeLeft={handleSwipeLeft}
+            undoId={undoId}
+            triggerSwipe={triggerSwipe}
+            onReset={isGuest ? resetTutorial : undefined}
+          />
+        </div>
       </div>
 
       <InteractionBar

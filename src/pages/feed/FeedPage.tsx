@@ -12,6 +12,7 @@ import {
   DigestSection,
   TournamentsSection,
 } from '@/components/feed';
+import { PageContainer } from '@/components/layout/PageContainer';
 import {
   fetchHeroMatch,
   fetchChallenges,
@@ -180,83 +181,80 @@ export function FeedPage() {
       style={{
         background: 'var(--color-bg)',
         minHeight: '100vh',
-        paddingTop: 52, // Account for fixed header
       }}
     >
-      {/* Fixed Header */}
-      <FeedHeader
-        onSearchClick={handleSearchClick}
-        onNotificationClick={handleNotificationClick}
-        onAvatarClick={handleAvatarClick}
-        hasNotifications={false} // TODO: Get from notifications state
-      />
-
-      {/* Segment Filter Strip */}
-      <div style={{ padding: '0 16px' }}>
-        <SegmentStrip
-          activeFilter={activeFilter}
-          onFilterChange={handleFilterChange}
+      {/* Fixed Header — mobile only (desktop nav is in AppShell) */}
+      <div className="lg:hidden">
+        <FeedHeader
+          onSearchClick={handleSearchClick}
+          onNotificationClick={handleNotificationClick}
+          onAvatarClick={handleAvatarClick}
+          hasNotifications={false}
         />
       </div>
 
-      {/* Feed Content */}
-      <div
-        style={{
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-          padding: '0 16px 80px', // Bottom padding for tab bar
-        }}
-        className="hide-scrollbar"
-      >
-        {loading && !feedData.heroMatch && (
-          <div style={{ padding: '40px 0', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-t2)' }}>
-              Loading...
-            </p>
-          </div>
-        )}
+      <PageContainer>
+        {/* Segment Filter Strip */}
+        <div style={{ padding: '0 16px' }}>
+          <SegmentStrip
+            activeFilter={activeFilter}
+            onFilterChange={handleFilterChange}
+          />
+        </div>
 
-        {!loading && isEmpty && (
-          <EmptyState filter={activeFilter} />
-        )}
+        {/* Feed Content */}
+        <div
+          style={{
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            padding: '0 16px',
+            paddingBottom: 'var(--page-pb)',
+          }}
+          className="hide-scrollbar"
+        >
+          {loading && !feedData.heroMatch && (
+            <div style={{ padding: '40px 0', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-t2)' }}>
+                Loading...
+              </p>
+            </div>
+          )}
 
-        {!isEmpty && (
-          <>
-            <HeroSection
-              heroMatch={feedData.heroMatch}
-              onShareClick={handleShareClick}
-              onOptionsClick={handleOptionsClick}
-            />
+          {!loading && isEmpty && (
+            <EmptyState filter={activeFilter} />
+          )}
 
-            <ChallengesSection
-              challenges={feedData.challenges}
-              onRespondClick={handleRespondClick}
-            />
+          {!isEmpty && (
+            <>
+              <HeroSection
+                heroMatch={feedData.heroMatch}
+                onShareClick={handleShareClick}
+                onOptionsClick={handleOptionsClick}
+              />
 
-            <OpenMatchesSection
-              openMatches={feedData.openMatches}
-              onJoinClick={handleJoinClick}
-            />
+              <ChallengesSection
+                challenges={feedData.challenges}
+                onRespondClick={handleRespondClick}
+              />
 
-            <DigestSection
-              matches={feedData.weeklyMatches}
-            />
+              <OpenMatchesSection
+                openMatches={feedData.openMatches}
+                onJoinClick={handleJoinClick}
+              />
 
-            <TournamentsSection
-              tournaments={feedData.tournaments}
-              onEnterClick={handleEnterClick}
-            />
-          </>
-        )}
-      </div>
+              <DigestSection
+                matches={feedData.weeklyMatches}
+              />
 
-      {/* CSS to hide scrollbar */}
-      <style>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+              <TournamentsSection
+                tournaments={feedData.tournaments}
+                onEnterClick={handleEnterClick}
+              />
+            </>
+          )}
+        </div>
+      </PageContainer>
     </div>
   );
 }

@@ -99,9 +99,9 @@ export function CreateAnnouncementPage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--color-surf)' }}>
       <div className="sticky top-0 z-10 safe-top" style={{ background: 'var(--color-surf)', borderBottom: '1px solid var(--color-bdr)' }}>
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
           <button
-            onClick={() => step > 1 && clubs.length > 1 ? setStep(1) : navigate(-1)}
+            onClick={handleBack}
             className="p-2 -ml-2"
             style={{ color: 'var(--color-t2)' }}
           >

@@ -21,6 +21,7 @@ import { supabase } from '@/lib/supabase';
 import type { SportType, LikedPlayer } from '@/types/database';
 import { fetchPendingScoreMatches } from '@/lib/scoring';
 import { useThemeContext } from '@/contexts/ThemeContext';
+import { PageContainer } from '@/components/layout/PageContainer';
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 
@@ -201,6 +202,7 @@ export function ProfilePage() {
         WebkitOverflowScrolling: 'touch',
       }}
     >
+      <PageContainer style={{ display: 'flex', flexDirection: 'column' }}>
       {/* ── A. Profile Hero ─────────────────────────────────────────────────── */}
       <div
         style={{
@@ -815,6 +817,7 @@ export function ProfilePage() {
         open={likedModalOpen}
         onClose={() => setLikedModalOpen(false)}
       />
+      </PageContainer>
     </div>
   );
 }
