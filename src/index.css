@@ -120,32 +120,37 @@ html, body {
 .filter-range::-moz-range-thumb     { background: var(--color-acc); }
 
 /* ─── Responsive layout tokens ───────────────────────────────────────────── */
-/*     --content-max-w : max-width for centered page content                  */
-/*     --page-pb       : bottom padding that clears the bottom nav element    */
 :root {
   --content-max-w: 100%;
   --page-pb: calc(64px + env(safe-area-inset-bottom, 0px) + 16px);
-  /* bottom offset for InteractionBar (above tab bar on mobile) */
   --interaction-bar-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {
   :root {
-    --content-max-w: 640px;
+    --content-max-w: 680px;
   }
 }
 
 @media (min-width: 1024px) {
   :root {
-    --content-max-w: 720px;
+    --content-max-w: 860px;
     --page-pb: 24px;
-    /* no tab bar on desktop — sit just above the viewport bottom */
     --interaction-bar-bottom: 16px;
   }
 }
 
 @media (min-width: 1280px) {
   :root {
-    --content-max-w: 800px;
+    --content-max-w: 960px;
+  }
+}
+
+/* ─── Accessibility: reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
