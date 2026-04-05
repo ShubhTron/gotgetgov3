@@ -94,6 +94,14 @@ export function CreateAnnouncementPage() {
     }
   };
 
+  const handleBack = () => {
+    if (step > 1 && clubs.length > 1) {
+      setStep(step - 1);
+    } else {
+      navigate(-1);
+    }
+  };
+
   const allSports = Object.keys(SPORTS) as SportType[];
 
   return (

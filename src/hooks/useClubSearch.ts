@@ -13,7 +13,6 @@ export interface SelectedClub {
   location_lng: number | null;
 }
 
-const CLUB_SEARCH_RADIUS_DEG = 0.5; // ~55 km bounding box
 
 function toSelectedClub(row: {
   id: string;
@@ -50,15 +49,9 @@ export function useClubSearch(
   const sportsKey = sports.join(',');
 
   useEffect(() => {
-    if (lat === null || lng === null) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
     const trimmed = query.trim();
 
-    // ── No query: show nearby paddlescores clubs ──────────────────────────────
+    // ── No query: fetch all paddlescores clubs ────────────────────────────────
     if (!trimmed) {
       let cancelled = false;
       setLoading(true);
@@ -67,20 +60,11 @@ export function useClubSearch(
         .from('clubs')
         .select('id, name, city, state, logo_url, cover_image_url, location_lat, location_lng')
         .eq('source', 'paddlescores')
-        .gte('location_lat', lat - CLUB_SEARCH_RADIUS_DEG)
-        .lte('location_lat', lat + CLUB_SEARCH_RADIUS_DEG)
-        .gte('location_lng', lng - CLUB_SEARCH_RADIUS_DEG)
-        .lte('location_lng', lng + CLUB_SEARCH_RADIUS_DEG)
-        .limit(20)
-        .then(({ data, error }) => {
+        .limit(50)
+        .then(({ data, error }: { data: Parameters<typeof toSelectedClub>[0][] | null; error: unknown }) => {
           if (cancelled) return;
-          if (error) console.error('Club proximity search error:', error);
-          const sorted = (data ?? []).slice().sort((a, b) => {
-            const dA = Math.abs((a.location_lat ?? 0) - lat) + Math.abs((a.location_lng ?? 0) - lng);
-            const dB = Math.abs((b.location_lat ?? 0) - lat) + Math.abs((b.location_lng ?? 0) - lng);
-            return dA - dB;
-          });
-          setResults(sorted.map(toSelectedClub));
+          if (error) console.error('Club fetch error:', error);
+          setResults((data ?? []).map(toSelectedClub));
           setLoading(false);
         });
       return () => { cancelled = true; };
@@ -108,7 +92,7 @@ export function useClubSearch(
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, lat, lng, sportsKey]);
+  }, [query, sportsKey]);
 
   return { results, loading };
 }

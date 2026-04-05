@@ -87,6 +87,10 @@ export function CreateCirclePage() {
   const canSubmit = name.trim() &&
     (groupType === 'circle' || (groupType === 'team' && selectedSport));
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit || !user) return;
     setIsSubmitting(true);

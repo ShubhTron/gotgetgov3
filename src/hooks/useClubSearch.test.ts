@@ -11,7 +11,7 @@ vi.mock('@/lib/supabase', () => ({
 
 function makeMockQuery(resolvedData: unknown[]) {
   const q: Record<string, unknown> = {};
-  ['select', 'eq', 'gte', 'lte', 'ilike'].forEach(m => {
+  ['select', 'eq', 'ilike'].forEach(m => {
     q[m] = vi.fn().mockReturnValue(q);
   });
   q['limit'] = vi.fn().mockResolvedValue({ data: resolvedData, error: null });
@@ -25,13 +25,17 @@ describe('useClubSearch', () => {
     (window as unknown as Record<string, unknown>).google = undefined;
   });
 
-  it('returns empty results and not loading when lat/lng are null', () => {
+  it('returns empty results and not loading when lat/lng are null', async () => {
+    const mockQuery = makeMockQuery([]);
+    vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+
     const { result } = renderHook(() => useClubSearch('', null, null, []));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.results).toEqual([]);
-    expect(result.current.loading).toBe(false);
   });
 
-  it('queries Supabase by proximity when lat/lng set and no query typed', async () => {
+  it('fetches all paddlescores clubs when no query typed', async () => {
     const mockClubs = [
       {
         id: 'abc',
@@ -47,12 +51,13 @@ describe('useClubSearch', () => {
     const mockQuery = makeMockQuery(mockClubs);
     vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
 
-    const { result } = renderHook(() => useClubSearch('', 40.98, -73.68, []));
+    const { result } = renderHook(() => useClubSearch('', null, null, []));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(supabase.from).toHaveBeenCalledWith('clubs');
     expect(mockQuery.eq).toHaveBeenCalledWith('source', 'paddlescores');
+    expect(mockQuery.limit).toHaveBeenCalledWith(50);
     expect(result.current.results).toHaveLength(1);
     expect(result.current.results[0].name).toBe('Westchester Country Club');
   });
