@@ -549,7 +549,7 @@ export function OnboardingPage() {
 
       {/* Sticky CTA — outside ob-content so fixed positioning works correctly */}
       <AnimatePresence>
-        {(step !== 'sports' || data.selectedSports.length > 0) && !imagePickerOpen && (
+        {(step !== 'sports' || data.selectedSports.length > 0) && (step !== 'location_club' || data.selectedClubs.length > 0) && !imagePickerOpen && (
           <motion.div
             key="cta"
             initial={{ opacity: 0, y: 40 }}
@@ -561,7 +561,6 @@ export function OnboardingPage() {
             <button className={`ob-cta${btnPressed ? ' pressed' : ''}`} onClick={handleNext} disabled={
               loading ||
               (step === 'roles' && data.selectedRoles.length === 0) ||
-              (step === 'location_club' && data.selectedClubs.length === 0) ||
               (step === 'coach_sports' && data.coachSports.length === 0)
             }>
               {loading ? <div className="ob-spinner" /> : <span>{isLastStep ? 'Complete Setup' : 'Continue'}</span>}
