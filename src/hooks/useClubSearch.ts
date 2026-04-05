@@ -79,9 +79,19 @@ export function useClubSearch(
           .from('clubs')
           .select('id, name, city, state, logo_url, cover_image_url, location_lat, location_lng')
           .ilike('name', `%${trimmed}%`)
-          .limit(10);
+          .order('source', { ascending: false }) // paddlescores before user-created
+          .limit(20);
 
-        setResults((dbClubs ?? []).map(toSelectedClub));
+        // Deduplicate by name (case-insensitive) — keep first occurrence (paddlescores wins)
+        const seen = new Set<string>();
+        const deduped = (dbClubs ?? []).filter(c => {
+          const key = c.name.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        setResults(deduped.map(toSelectedClub));
       } catch (err) {
         console.error('Club search error:', err);
         setResults([]);
