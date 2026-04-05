@@ -110,6 +110,49 @@
 }
 
 
+/* ─── Prevent horizontal overflow at all breakpoints ─────────────────────── */
+html, body {
+  overflow-x: hidden;
+}
+
 /* ─── Filter modal range sliders ─────────────────────────────────────────── */
 .filter-range::-webkit-slider-thumb { background: var(--color-acc); }
 .filter-range::-moz-range-thumb     { background: var(--color-acc); }
+
+/* ─── Responsive layout tokens ───────────────────────────────────────────── */
+:root {
+  --content-max-w: 100%;
+  --page-pb: calc(64px + env(safe-area-inset-bottom, 0px) + 16px);
+  --interaction-bar-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  --desktop-nav-height: 0px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --content-max-w: 680px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --content-max-w: 860px;
+    --page-pb: 24px;
+    --interaction-bar-bottom: 16px;
+    --desktop-nav-height: 64px;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --content-max-w: 960px;
+  }
+}
+
+/* ─── Accessibility: reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

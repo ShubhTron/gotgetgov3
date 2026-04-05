@@ -210,7 +210,7 @@ export function SearchModal({ isOpen, onClose, onFilterChange, userSports = [] }
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: [0.0, 0.0, 0.2, 1] }}
             className="fixed inset-0 z-[1000] overflow-y-auto md:inset-auto md:top-[80px] md:left-1/2 md:-translate-x-1/2 md:max-w-lg md:rounded-[14px] md:max-h-[calc(100dvh-100px)] md:border md:border-[var(--color-bdr)]"
-            style={{ background: 'var(--color-surf)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}
+            style={{ background: 'var(--color-surf)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', boxShadow: '0 8px 40px rgba(0,0,0,0.5)', maxWidth: 640, width: '100%', margin: '0 auto' }}
           >
             <div style={{ padding: '0 16px 16px', paddingTop: 'max(20px, env(safe-area-inset-top, 20px))', borderBottom: '1px solid var(--color-bdr)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

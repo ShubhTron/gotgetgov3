@@ -33,10 +33,10 @@ function DigestRow({ match, isFirst }: DigestRowProps) {
       {/* Win/Loss badge */}
       <div
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: '8px',
-          background: isWin ? 'var(--color-acc)' : 'var(--color-red)',
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          background: isWin ? 'rgba(22,212,106,0.12)' : 'rgba(239,68,68,0.12)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -46,9 +46,9 @@ function DigestRow({ match, isFirst }: DigestRowProps) {
         <span
           style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 16,
-            fontWeight: 700,
-            color: 'white',
+            fontSize: 12,
+            fontWeight: 800,
+            color: isWin ? 'var(--color-acc)' : 'var(--color-red)',
           }}
         >
           {isWin ? 'W' : 'L'}

@@ -1,4 +1,4 @@
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Clock, MapPin } from 'lucide-react';
 import type { FeedOpenMatch } from '@/types/feed';
 import { getInitials, formatRelativeTime } from '@/lib/feed-utils';
 
@@ -11,181 +11,127 @@ export function OpenMatchCard({ openMatch, onJoinClick }: OpenMatchCardProps) {
   const { host, distance } = openMatch;
   const { sport, confirmed_time, created_at } = openMatch.challenge;
 
-  // Format sport name for display
   const sportName = sport.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-
-  // Get player initials for avatar
   const initials = getInitials(host.full_name);
-
-  // Format date/time
   const dateTime = confirmed_time || created_at;
   const formattedTime = formatRelativeTime(dateTime);
 
   return (
     <div
       style={{
-        width: 148,
         background: 'var(--color-surf)',
-        borderRadius: '18px',
+        borderRadius: '16px',
         border: '1px solid var(--color-bdr)',
         boxShadow: '0 1px 4px rgba(20,18,14,0.06), 0 6px 20px rgba(20,18,14,0.07)',
-        padding: '14px',
+        padding: '13px 14px',
+        marginBottom: '8px',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         gap: 12,
-        flexShrink: 0,
       }}
     >
-      {/* Avatar with initials */}
+      {/* Avatar */}
       <div
         style={{
-          width: 48,
-          height: 48,
-          borderRadius: '12px',
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
           background: 'var(--color-acc-bg)',
-          border: '1px solid var(--color-acc)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          flexShrink: 0,
         }}
       >
         <span
           style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: 700,
-            color: 'var(--color-acc-dk)',
+            color: 'var(--color-acc)',
           }}
         >
           {initials}
         </span>
       </div>
 
-      {/* Player name */}
-      <h3
-        style={{
-          fontFamily: 'var(--font-body)',
-          fontSize: 16,
-          fontWeight: 700,
-          color: 'var(--color-t1)',
-          margin: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {host.full_name}
-      </h3>
-
-      {/* Sport pill badge */}
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          padding: '4px 10px',
-          borderRadius: 99,
-          background: 'var(--color-acc)',
-          alignSelf: 'flex-start',
-        }}
-      >
-        <span
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 12,
-            fontWeight: 700,
-            color: 'var(--color-t1)',
-          }}
-        >
-          {sportName}
-        </span>
-      </div>
-
-      {/* Date/Time/Distance details */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-        }}
-      >
-        {/* Date pill */}
-        {confirmed_time && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <Calendar size={12} style={{ color: 'var(--color-t2)', flexShrink: 0 }} />
-            <span
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--color-t2)',
-              }}
-            >
-              {new Date(confirmed_time).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
-            </span>
-          </div>
-        )}
-
-        {/* Time pill */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          <Clock size={12} style={{ color: 'var(--color-t2)', flexShrink: 0 }} />
-          <span
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Name + sport pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <h3
             style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--color-t2)',
+              fontSize: 15,
+              fontWeight: 700,
+              color: 'var(--color-t1)',
+              margin: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            {formattedTime}
+            {host.full_name}
+          </h3>
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: 99,
+              background: 'var(--color-surf-2)',
+              border: '1px solid var(--color-bdr)',
+              fontFamily: 'var(--font-body)',
+              fontSize: 11,
+              fontWeight: 600,
+              color: 'var(--color-t2)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {sportName}
           </span>
         </div>
 
-        {/* Distance pill */}
-        {distance > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <MapPin size={12} style={{ color: 'var(--color-t2)', flexShrink: 0 }} />
+        {/* Time + distance */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Clock size={11} style={{ color: 'var(--color-t3)', flexShrink: 0 }} />
             <span
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: 12,
-                fontWeight: 600,
-                color: 'var(--color-t2)',
+                fontWeight: 500,
+                color: 'var(--color-t3)',
               }}
             >
-              {distance} mi
+              {formattedTime}
             </span>
           </div>
-        )}
+
+          {distance > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <MapPin size={11} style={{ color: 'var(--color-t3)', flexShrink: 0 }} />
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--color-t3)',
+                }}
+              >
+                {distance} mi
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Join Match button */}
+      {/* Join button */}
       <button
         onClick={onJoinClick}
         aria-label="Join match"
         style={{
-          height: 36,
-          padding: '0 16px',
+          height: 34,
+          padding: '0 14px',
           borderRadius: 99,
           background: 'var(--color-acc)',
           border: 'none',
@@ -194,7 +140,7 @@ export function OpenMatchCard({ openMatch, onJoinClick }: OpenMatchCardProps) {
           justifyContent: 'center',
           cursor: 'pointer',
           transition: 'background 0.2s',
-          marginTop: 'auto',
+          flexShrink: 0,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'var(--color-acc-dk)';
@@ -206,12 +152,12 @@ export function OpenMatchCard({ openMatch, onJoinClick }: OpenMatchCardProps) {
         <span
           style={{
             fontFamily: 'var(--font-body)',
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: 700,
             color: 'var(--color-t1)',
           }}
         >
-          Join Match
+          Join
         </span>
       </button>
     </div>

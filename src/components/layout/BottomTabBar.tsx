@@ -74,7 +74,7 @@ export function BottomTabBar({ unreadMessages = 0, onCreateClick }: BottomTabBar
     <>
       {/* Spacer so content scrolls above tab bar */}
       <div
-        className="lg:hidden"
+        className="lg:hidden bottom-tab-spacer"
         style={{ height: 'calc(64px + env(safe-area-inset-bottom, 0px))', flexShrink: 0 }}
       />
 
@@ -101,6 +101,11 @@ export function BottomTabBar({ unreadMessages = 0, onCreateClick }: BottomTabBar
       </nav>
 
       <style>{`
+        @media (min-width: 1024px) {
+          .bottom-tab-bar { display: none !important; }
+          .bottom-tab-spacer { display: none !important; }
+        }
+
         .bottom-tab-bar {
           position: fixed;
           bottom: 0;

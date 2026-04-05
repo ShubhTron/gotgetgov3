@@ -48,20 +48,20 @@ export function TournamentCard({ tournament, onEnterClick }: TournamentCardProps
           gap: 12,
         }}
       >
-        {/* Dark rounded square icon with trophy */}
+        {/* Trophy icon */}
         <div
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: '12px',
-            background: 'var(--color-t1)',
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            background: 'var(--color-acc-bg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          <Trophy size={24} style={{ color: 'var(--color-acc)' }} />
+          <Trophy size={20} style={{ color: 'var(--color-acc)' }} />
         </div>
 
         {/* Content */}

@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarDays, Clock, MapPin,
-  ChevronLeft, ChevronRight, X,
+  ChevronLeft, ChevronRight, X, CheckCircle2,
 } from 'lucide-react';
 import {
   format, addDays, addWeeks, startOfDay, startOfWeek, isSameDay, isToday as isDateToday,
@@ -317,7 +318,8 @@ export function SchedulePage() {
 
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg)', paddingBottom: 148 }}>
+    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--color-bg)', paddingBottom: 'var(--page-pb)' as any }}>
+      <PageContainer>
 
       {/* ── Greeting ───────────────────────────────────────────────────────── */}
       <div style={{ padding: 'var(--space-5) var(--space-5) var(--space-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -394,7 +396,7 @@ export function SchedulePage() {
           </div>
 
           {/* Day grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 52px))', gap: 4, justifyContent: 'space-between' }}>
             {twoWeekDays.map((day) => {
               const isSelected = isSameDay(day, selectedDate);
               const hasEvent = hasEventOnDay(day);
@@ -406,6 +408,8 @@ export function SchedulePage() {
                   onClick={() => setSelectedDate(day)}
                   aria-label={format(day, 'EEEE, MMMM d')}
                   style={{
+                    width: '100%',
+                    maxWidth: 52,
                     aspectRatio: '1', display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center',
                     borderRadius: '50%', border: 'none', cursor: 'pointer',
@@ -560,6 +564,7 @@ export function SchedulePage() {
           eventSummary={calendarPromptData.summary}
         />
       )}
+      </PageContainer>
     </div>
   );
 }
@@ -733,7 +738,8 @@ function AgendaCard({ item, onPlayerClick }: {
               color: 'var(--color-acc)',
               display: 'flex', alignItems: 'center', gap: 4,
             }}>
-              ✓ Confirmed
+              <CheckCircle2 size={10} />
+              Confirmed
             </span>
           )}
           {item.status === 'pending' && (

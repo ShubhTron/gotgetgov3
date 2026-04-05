@@ -45,11 +45,10 @@ export function ChallengeCard({ challenge, onRespondClick }: ChallengeCardProps)
         {/* Avatar with initials */}
         <div
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: '12px',
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
             background: 'var(--color-acc-bg)',
-            border: '1px solid var(--color-acc)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -59,9 +58,9 @@ export function ChallengeCard({ challenge, onRespondClick }: ChallengeCardProps)
           <span
             style={{
               fontFamily: 'var(--font-body)',
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: 700,
-              color: 'var(--color-acc-dk)',
+              color: 'var(--color-acc)',
             }}
           >
             {initials}
@@ -96,15 +95,16 @@ export function ChallengeCard({ challenge, onRespondClick }: ChallengeCardProps)
             {isNew && (
               <span
                 style={{
-                  padding: '2px 8px',
+                  padding: '2px 7px',
                   borderRadius: 99,
-                  background: 'var(--color-acc)',
+                  background: 'var(--color-acc-bg)',
+                  border: '1px solid var(--color-acc)',
                   fontFamily: 'var(--font-body)',
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 700,
-                  color: 'var(--color-t1)',
+                  color: 'var(--color-acc)',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.03em',
+                  letterSpacing: '0.04em',
                   flexShrink: 0,
                 }}
               >

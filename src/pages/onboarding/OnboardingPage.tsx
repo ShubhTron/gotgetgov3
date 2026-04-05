@@ -18,20 +18,9 @@ import {
   getSportsStepTitle,
   getSportsStepDesc,
 } from './onboardingUtils';
+import { useClubSearch, type SelectedClub } from '@/hooks/useClubSearch';
 
-interface SelectedClub {
-  id: string;
-  name: string;
-  city: string | null;
-  state: string | null;
-  logo_url: string | null;
-  cover_image_url: string | null;
-  location_lat: number | null;
-  location_lng: number | null;
-  membershipRole?: ClubRole;
-}
-
-const CLUB_SEARCH_RADIUS_M = 25000;
+type SelectedClubWithRole = SelectedClub & { membershipRole?: ClubRole };
 
 const SPORT_IMAGES: Record<string, string> = {
   platform_tennis: 'https://images.pexels.com/photos/5067821/pexels-photo-5067821.jpeg?auto=compress&cs=tinysrgb&w=400',
@@ -74,14 +63,14 @@ interface OnboardingData {
   fullName: string;
   avatarUrl: string;
   avatarFile?: File;
-  selectedClubs: SelectedClub[];
+  selectedClubs: SelectedClubWithRole[];
   availability: AvailabilityEntry[];
   bio: string;
 
   // --- new fields ---
   selectedRoles: ClubRole[];
   coachSports: SportType[];
-  coachClubs: SelectedClub[];
+  coachClubs: SelectedClubWithRole[];
   coachSpecialties: Record<SportType, string[]>;
   coachLessons: LessonPackage[];
   coachProfileId: string | null;
@@ -140,127 +129,101 @@ const S = `
   .ob-skill-level-name{display:none}
   .ob-skill-level-desc{display:none}
 
-  /* sport section card */
+  /* ── Jersey Card ── */
   .ob-sport-section{
-    margin-bottom:20px;
+    margin-bottom:16px;
     position:relative;
-    background:var(--color-surf);
-    border:1px solid var(--color-bdr);
-    border-radius:16px;
-    padding:18px 18px 20px;
+    background:#08111e;
+    border:1px solid rgba(255,255,255,0.07);
+    border-radius:22px;
+    padding:18px 18px 16px;
     overflow:hidden;
-    backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
-    box-shadow:0 4px 24px rgba(0,0,0,0.1),inset 0 1px 0 var(--color-bdr-s);
+    box-shadow:0 8px 36px rgba(0,0,0,0.35),0 1px 0 rgba(255,255,255,0.05) inset;
+    transition:transform 0.2s,box-shadow 0.2s;
+    min-height:168px;
   }
+  .ob-sport-section:active{transform:scale(0.995)}
   .ob-sport-section-bg{
-    display:none;
+    position:absolute;inset:0;
+    background-size:cover;background-position:center;
+    transform:scale(1.06);
+    z-index:0;
   }
-  .ob-sport-section-content{position:relative;z-index:1}
+  .ob-sport-section-overlay{
+    position:absolute;inset:0;z-index:1;
+    background:linear-gradient(150deg,rgba(4,10,22,0.87) 0%,rgba(4,10,22,0.6) 55%,rgba(4,10,22,0.82) 100%);
+  }
+  .ob-sport-section-content{position:relative;z-index:2}
+
+  /* sport header row */
   .ob-sport-section-name{
-    font-family:var(--font-body);font-weight:600;
-    font-size:1.15rem;text-transform:uppercase;letter-spacing:0.12em;
-    color:var(--color-t1);margin-bottom:12px;
+    font-family:var(--font-body);font-weight:700;
+    font-size:0.6rem;text-transform:uppercase;letter-spacing:0.2em;
+    color:rgba(255,255,255,0.45);margin-bottom:10px;
     display:flex;align-items:center;justify-content:space-between;
   }
 
-  /* inline level + desc row */
+  /* level display — refined, minimal */
   .ob-skill-inline{
-    display:flex;flex-direction:column;gap:3px;
-    margin-bottom:20px;
+    display:flex;flex-direction:column;gap:4px;
+    margin-bottom:14px;
   }
   .ob-skill-inline-name{
-    font-family:var(--font-body);font-weight:700;
-    font-size:0.95rem;text-transform:uppercase;letter-spacing:0.12em;
-    color:var(--color-t1);
-    transition:font-weight 0.2s,color 0.2s;
+    font-family:var(--font-body);font-weight:600;
+    font-size:1.35rem;letter-spacing:0.01em;text-transform:none;
+    color:#fff;line-height:1.2;
+    transition:color 0.15s;
   }
   .ob-skill-inline-desc{
-    font-family:var(--font-body);font-size:0.78rem;font-weight:400;
-    color:var(--color-t2);
-    transition:color 0.2s;
+    font-family:var(--font-body);font-size:0.75rem;font-weight:400;
+    color:rgba(255,255,255,0.45);line-height:1.4;font-style:normal;
+    transition:color 0.15s;
   }
 
-  /* track */
-  .ob-slider-track-wrap{position:relative;padding:0 2px}
-    position:relative;height:4px;border-radius:4px;
-    background:var(--color-bdr-s);
+  /* ── Level chips — 44px touch targets ── */
+  .ob-level-chips{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    gap:6px;
   }
-  .ob-slider-fill{
-    position:absolute;left:0;top:0;height:100%;border-radius:4px;
-    background:linear-gradient(90deg,var(--color-acc),var(--color-acc));
-    transition:width 0.28s cubic-bezier(0.22,1,0.36,1);
-    box-shadow:0 0 8px rgba(22,212,106,0.5);
+  .ob-level-chip{
+    height:40px;border-radius:10px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.05);
+    font-family:var(--font-body);font-weight:500;
+    font-size:0.7rem;text-transform:none;letter-spacing:0.01em;
+    color:rgba(255,255,255,0.4);
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all 0.18s cubic-bezier(0.22,1,0.36,1);
+    user-select:none;
   }
-
-  /* ticks */
-  .ob-slider-ticks{
-    position:absolute;top:50%;transform:translateY(-50%);
-    left:0;right:0;display:flex;justify-content:space-between;
-    pointer-events:none;
+  .ob-level-chip:hover:not(.active){
+    background:rgba(255,255,255,0.1);
+    color:rgba(255,255,255,0.75);
+    border-color:rgba(255,255,255,0.22);
   }
-  .ob-slider-tick{
-    width:4px;height:4px;border-radius:50%;
-    background:var(--color-bdr-s);
-    transition:background 0.25s,transform 0.25s;
-  }
-  .ob-slider-tick.passed{background:var(--color-acc-bg)}
-  .ob-slider-tick.current{background:var(--color-t1);transform:scale(1.6);box-shadow:0 0 6px var(--color-bdr-s)}
-
-  /* thumb */
-  .ob-slider-thumb{
-    position:absolute;top:50%;
-    width:20px;height:20px;border-radius:50%;
-    background:var(--color-t1);
-    border:2.5px solid var(--color-acc);
-    box-shadow:0 0 0 4px rgba(22,212,106,0.18),0 2px 10px rgba(0,0,0,0.4);
-    transform:translate(-50%,-50%);
-    transition:left 0.28s cubic-bezier(0.22,1,0.36,1),box-shadow 0.2s;
-    pointer-events:none;z-index:2;
+  .ob-level-chip:active{transform:scale(0.95)}
+  .ob-level-chip.active{
+    background:rgba(22,212,106,0.12);
+    border-color:rgba(22,212,106,0.6);
+    color:var(--color-acc);font-weight:600;
   }
 
-  /* native range overlay */
-  .ob-slider-input{
-    position:absolute;inset:-14px 0;width:100%;height:calc(100% + 28px);
-    opacity:0;cursor:pointer;z-index:3;margin:0;-webkit-appearance:none;
-  }
-  .ob-slider-input:active ~ .ob-slider-thumb{
-    box-shadow:0 0 0 8px rgba(22,212,106,0.2),0 2px 10px rgba(0,0,0,0.4);
-  }
-
-  /* labels — equal grid so ticks align perfectly */
-  .ob-slider-labels{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    margin-top:10px;
-  }
-  .ob-slider-label{
-    font-family:var(--font-body);font-weight:400;
-    font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;
-    color:var(--color-t3);
-    transition:color 0.2s,font-weight 0.2s;cursor:pointer;
-    padding:4px 0;user-select:none;
-    text-align:center;
-  }
-  .ob-slider-label:first-child{text-align:left}
-  .ob-slider-label:last-child{text-align:right}
-  .ob-slider-label.active{color:var(--color-t1);font-weight:700}
-
-  /* PTI rating toggle — secondary button style */
+  /* PTI rating toggle — compact inline link style */
   .ob-rating-toggle{
-    display:inline-flex;align-items:center;gap:6px;
-    margin-top:16px;padding:9px 16px;
-    background:var(--color-acc-bg);
-    border:1px solid var(--color-bdr);
+    display:inline-flex;align-items:center;gap:5px;
+    margin-top:10px;
+    padding:7px 12px 7px 10px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.1);
     border-radius:10px;
-    font-family:var(--font-body);font-size:0.78rem;font-weight:600;
-    letter-spacing:0.06em;text-transform:uppercase;
-    color:var(--color-acc);
-    cursor:pointer;transition:background 0.2s,border-color 0.2s;
-    width:100%;justify-content:center;
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    font-family:var(--font-body);font-size:0.68rem;font-weight:600;
+    letter-spacing:0.05em;text-transform:uppercase;
+    color:rgba(255,255,255,0.4);
+    cursor:pointer;transition:color 0.2s,background 0.2s,border-color 0.2s;
+    min-height:36px;
   }
-  .ob-rating-toggle:hover{background:var(--color-surf-2);border-color:var(--color-acc)}
+  .ob-rating-toggle:hover{color:var(--color-acc);background:rgba(22,212,106,0.1);border-color:rgba(22,212,106,0.3)}
 
   /* legacy hidden */
   .ob-skill-card,.ob-skill-card-num,.ob-skill-card-check,
@@ -321,114 +284,6 @@ interface StepProps {
   setData: React.Dispatch<React.SetStateAction<OnboardingData>>;
 }
 
-function useGoogleMaps(): { ready: boolean } {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-    if (!key) return;
-
-    const src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
-
-    // Avoid appending if script already exists
-    if (!document.querySelector(`script[src="${src}"]`)) {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      document.head.appendChild(script);
-    }
-
-    // Poll until window.google?.maps is available
-    const interval = setInterval(() => {
-      if ((window as Window & typeof globalThis & { google?: { maps?: unknown } }).google?.maps) {
-        setReady(true);
-        clearInterval(interval);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return { ready };
-}
-
-function useClubSearch(
-  query: string,
-  lat: number | null,
-  lng: number | null,
-  sports: SportType[]
-): { results: SelectedClub[]; loading: boolean } {
-  const [results, setResults] = useState<SelectedClub[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const trimmed = query.trim();
-
-    // Early-exit conditions
-    if (!trimmed || lat === null || lng === null) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
-    // Maps SDK not ready
-    const g = (window as Window & typeof globalThis & { google?: { maps?: { places?: unknown; LatLng?: unknown } } }).google;
-    if (!g?.maps) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    const timer = setTimeout(() => {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mapsApi = g.maps as any;
-        const service = new mapsApi.places.PlacesService(document.createElement('div'));
-        const keyword = sports.join(' ');
-
-        service.nearbySearch(
-          {
-            location: new mapsApi.LatLng(lat, lng),
-            radius: CLUB_SEARCH_RADIUS_M,
-            keyword,
-            type: 'establishment',
-          },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (places: any[] | null, status: string) => {
-            if (status === mapsApi.places.PlacesServiceStatus.OK && places) {
-              setResults(
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                places.map((place: any) => ({
-                  id: place.place_id ?? '',
-                  name: place.name ?? '',
-                  city: null,
-                  state: null,
-                  logo_url: null,
-                  cover_image_url: null,
-                  location_lat: place.geometry?.location?.lat() ?? null,
-                  location_lng: place.geometry?.location?.lng() ?? null,
-                }))
-              );
-            } else {
-              setResults([]);
-            }
-            setLoading(false);
-          }
-        );
-      } catch (err) {
-        console.error('Club search error:', err);
-        setResults([]);
-        setLoading(false);
-      }
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [query, lat, lng, sports]);
-
-  return { results, loading };
-}
 
 export function OnboardingPage() {
   const navigate = useNavigate();
@@ -694,7 +549,7 @@ export function OnboardingPage() {
 
       {/* Sticky CTA — outside ob-content so fixed positioning works correctly */}
       <AnimatePresence>
-        {(step !== 'sports' || data.selectedSports.length > 0) && !imagePickerOpen && (
+        {(step !== 'sports' || data.selectedSports.length > 0) && (step !== 'location_club' || data.selectedClubs.length > 0) && !imagePickerOpen && (
           <motion.div
             key="cta"
             initial={{ opacity: 0, y: 40 }}
@@ -988,9 +843,11 @@ const SportIcon = ({ sport, color }: { sport: string; color: string }) => {
 };
 
 
+const CHIP_LABELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+
 function SkillStep({ data, setData }: StepProps) {
   const SKILL_META = [
-    { label: 'Beginner',     desc: 'Just trying out, learning the basics' },
+    { label: 'Beginner',     desc: 'Just starting out, learning the basics' },
     { label: 'Intermediate', desc: 'Comfortable playing, improving consistency' },
     { label: 'Advanced',     desc: 'Competitive player, strong technique' },
     { label: 'Expert',       desc: 'Tournament-level, highly competitive' },
@@ -1008,88 +865,72 @@ function SkillStep({ data, setData }: StepProps) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {data.selectedSports.map((sport, i) => {
         const sportInfo = SPORTS[sport];
         const currentLevel = data.sportLevels[sport] ?? 1;
-        const fillPct = (currentLevel / (SKILL_META.length - 1)) * 100;
 
         return (
           <motion.div
             key={sport}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 16, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: i * 0.08, duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
             className="ob-sport-section"
-            style={{
-              background: SPORT_ACCENT.bg,
-              borderColor: SPORT_ACCENT.border,
-            }}
           >
-            {/* Blurred sport photo background */}
+            {/* Full sport photo background */}
             {SPORT_IMAGES[sport] && (
               <div
                 className="ob-sport-section-bg"
                 style={{ backgroundImage: `url(${SPORT_IMAGES[sport]})` }}
               />
             )}
+            {/* Dark gradient overlay */}
+            <div className="ob-sport-section-overlay" />
 
             <div className="ob-sport-section-content">
-            {/* Sport name header */}
-            <p className="ob-sport-section-name">
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                  <SportIcon sport={sport} color={SPORT_ACCENT.icon} />
+              {/* Sport name header */}
+              <p className="ob-sport-section-name">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    <SportIcon sport={sport} color="rgba(255,255,255,0.6)" />
+                  </span>
+                  {sportInfo?.name || sport}
                 </span>
-                {sportInfo?.name || sport}
-              </span>
-            </p>
+              </p>
 
-            <div className="ob-skill-slider-wrap">
-              {/* Current level + description */}
-              <motion.div
-                key={currentLevel}
-                initial={{ opacity: 0, y: 4, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="ob-skill-inline"
-              >
-                <span className="ob-skill-inline-name">{SKILL_META[currentLevel].label}</span>
-                <span className="ob-skill-inline-desc">{SKILL_META[currentLevel].desc}</span>
-              </motion.div>
+              {/* Level display — big scoreboard name */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentLevel}
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                  className="ob-skill-inline"
+                >
+                  <span className="ob-skill-inline-name">{SKILL_META[currentLevel].label}</span>
+                  <span className="ob-skill-inline-desc">{SKILL_META[currentLevel].desc}</span>
+                </motion.div>
+              </AnimatePresence>
 
-              {/* Slider */}
-              <div className="ob-slider-track-wrap">
-                <div className="ob-slider-track">
-                  <div className="ob-slider-fill" style={{ width: `${fillPct}%` }} />
-                  <div className="ob-slider-ticks">
-                    {SKILL_META.map((_, idx) => (
-                      <div key={idx} className={`ob-slider-tick${idx < currentLevel ? ' passed' : idx === currentLevel ? ' current' : ''}`} />
-                    ))}
-                  </div>
-                  <div className="ob-slider-thumb" style={{ left: `${fillPct}%` }} />
-                  <input
-                    type="range" min={0} max={SKILL_META.length - 1} step={1}
-                    value={currentLevel}
-                    onChange={e => setData(prev => ({ ...prev, sportLevels: { ...prev.sportLevels, [sport]: Number(e.target.value) } }))}
-                    className="ob-slider-input"
-                    aria-label={`Skill level for ${sportInfo?.name || sport}`}
-                  />
-                </div>
-                <div className="ob-slider-labels">
-                  {SKILL_META.map((meta, idx) => (
-                    <span
-                      key={idx}
-                      className={`ob-slider-label${idx === currentLevel ? ' active' : ''}`}
-                      onClick={() => setData(prev => ({ ...prev, sportLevels: { ...prev.sportLevels, [sport]: idx } }))}
-                    >
-                      {meta.label}
-                    </span>
-                  ))}
-                </div>
+              {/* Level chips — tap to select, 44px touch targets */}
+              <div className="ob-level-chips" role="group" aria-label={`Skill level for ${sportInfo?.name || sport}`}>
+                {SKILL_META.map((meta, idx) => (
+                  <motion.button
+                    key={idx}
+                    className={`ob-level-chip${idx === currentLevel ? ' active' : ''}`}
+                    onClick={() => setData(prev => ({ ...prev, sportLevels: { ...prev.sportLevels, [sport]: idx } }))}
+                    whileTap={{ scale: 0.92 }}
+                    transition={{ duration: 0.12 }}
+                    aria-pressed={idx === currentLevel}
+                  >
+                    {CHIP_LABELS[idx]}
+                  </motion.button>
+                ))}
               </div>
 
-              {/* PTI rating — anchored under the slider */}
+              {/* PTI / official rating toggle */}
               {sportInfo?.officialRatingSystem && (
                 <div>
                   <button
@@ -1097,7 +938,7 @@ function SkillStep({ data, setData }: StepProps) {
                     onClick={() => setData(prev => ({ ...prev, showRatings: { ...prev.showRatings, [sport]: !prev.showRatings[sport] } }))}
                   >
                     <span>Have a {sportInfo?.officialRatingSystem} rating?</span>
-                    <ChevronDown size={12} style={{ transform: data.showRatings[sport] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                    <ChevronDown size={11} style={{ transform: data.showRatings[sport] ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                   </button>
                   <AnimatePresence>
                     {data.showRatings[sport] && (
@@ -1108,6 +949,7 @@ function SkillStep({ data, setData }: StepProps) {
                             placeholder={`Enter your ${sportInfo?.officialRatingSystem} rating`}
                             value={data.externalRatings[sport] || ''}
                             onChange={e => setData(prev => ({ ...prev, externalRatings: { ...prev.externalRatings, [sport]: e.target.value } }))}
+                            style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
                           />
                         </div>
                       </motion.div>
@@ -1115,7 +957,6 @@ function SkillStep({ data, setData }: StepProps) {
                   </AnimatePresence>
                 </div>
               )}
-            </div>
             </div>
           </motion.div>
         );
@@ -1468,12 +1309,12 @@ function CoachLessonsStep({ data, setData }: StepProps) {
 }
 
 function LocationClubStep({ data, setData, user }: CoachStepProps) {
-  const { ready } = useGoogleMaps();
   const [query, setQuery] = useState('');
-  const [selectedClub, setSelectedClub] = useState<SelectedClub | null>(null);
-  const [membershipRole, setMembershipRole] = useState<ClubRole>('player');
   const [createError, setCreateError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const defaultRole: ClubRole = data.selectedRoles.includes('coach') ? 'coach'
+    : data.selectedRoles.includes('club_admin') ? 'club_admin'
+    : 'player';
   const { results, loading } = useClubSearch(
     query,
     data.locationLat,
@@ -1495,28 +1336,15 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
     );
   }, []);
 
-  const confirmClub = () => {
-    if (!selectedClub) return;
-    if (!data.selectedClubs.some(c => c.id === selectedClub.id)) {
-      setData(prev => ({
-        ...prev,
-        selectedClubs: [...prev.selectedClubs, { ...selectedClub, membershipRole }],
-      }));
-    }
-    setSelectedClub(null);
-    setQuery('');
-    setMembershipRole('player');
+  const toggleClub = (club: SelectedClub) => {
+    const already = data.selectedClubs.some(c => c.id === club.id);
+    setData(prev => ({
+      ...prev,
+      selectedClubs: already
+        ? prev.selectedClubs.filter(c => c.id !== club.id)
+        : [...prev.selectedClubs, { ...club, membershipRole: defaultRole }],
+    }));
   };
-
-  const removeClub = (clubId: string) => {
-    setData(prev => ({ ...prev, selectedClubs: prev.selectedClubs.filter(c => c.id !== clubId) }));
-  };
-
-  // Membership role options = intersection of {player, coach, club_admin} with selectedRoles,
-  // always including 'player'
-  const membershipOptions: ClubRole[] = ['player'];
-  if (data.selectedRoles.includes('coach')) membershipOptions.push('coach');
-  if (data.selectedRoles.includes('club_admin')) membershipOptions.push('club_admin');
 
   const createClub = async () => {
     const name = query.trim();
@@ -1532,7 +1360,7 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
       return;
     }
     if (newClub) {
-      setSelectedClub(newClub as SelectedClub);
+      toggleClub(newClub as SelectedClub);
       setQuery('');
     }
   };
@@ -1593,12 +1421,6 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
         </p>
       )}
 
-      {!ready && (
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--color-t2)', margin: 0 }}>
-          Search unavailable
-        </p>
-      )}
-
       {loading && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
           <div className="ob-spinner" />
@@ -1607,15 +1429,49 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
 
       {!loading && results.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {results.map(club => (
-            <button
-              key={club.id}
-              className="ob-club-result"
-              onClick={() => setSelectedClub(club)}
-            >
-              {club.name}
-            </button>
-          ))}
+          {results.map(club => {
+            const isSelected = data.selectedClubs.some(c => c.id === club.id);
+            return (
+              <motion.button
+                key={club.id}
+                className="ob-role-row"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: isSelected ? 'var(--color-acc-bg)' : 'var(--color-surf)',
+                  border: `1px solid ${isSelected ? 'var(--color-acc)' : 'var(--color-bdr)'}`,
+                  borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
+                  width: '100%', textAlign: 'left',
+                }}
+                onClick={() => toggleClub(club)}
+                animate={isSelected ? { scale: [1, 0.97, 1.01, 1] } : { scale: 1 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <div>
+                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.92rem', color: 'var(--color-t1)' }}>
+                    {club.name}
+                  </span>
+                  {(club.city || club.state) && (
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: 'var(--color-t3)', display: 'block', marginTop: 2 }}>
+                      {[club.city, club.state].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                </div>
+                <AnimatePresence>
+                  {isSelected && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: [0.34, 1.56, 0.64, 1] }}
+                      style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--color-acc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >
+                      <Check size={13} color="var(--color-bg)" strokeWidth={3} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            );
+          })}
         </div>
       )}
 
@@ -1626,53 +1482,6 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
         >
           + Create "{query.trim()}"
         </button>
-      )}
-
-      {selectedClub && (
-        <div style={{ background: 'var(--color-acc-bg)', border: '1px solid var(--color-bdr)', borderRadius: 12, padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-t2)', margin: 0 }}>
-            {selectedClub.name} — Join as
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {membershipOptions.map(role => (
-              <button
-                key={role}
-                className={`ob-skill-btn${membershipRole === role ? ' active' : ''}`}
-                onClick={() => setMembershipRole(role)}
-              >
-                {role === 'club_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
-              </button>
-            ))}
-          </div>
-          <button
-            className="ob-skill-btn active"
-            style={{ alignSelf: 'flex-start', padding: '10px 20px' }}
-            onClick={confirmClub}
-          >
-            Confirm
-          </button>
-        </div>
-      )}
-
-      {data.selectedClubs.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-          {data.selectedClubs.map(club => (
-            <div
-              key={club.id}
-              className="ob-club-chip"
-              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-            >
-              <span>{club.name}</span>
-              <button
-                onClick={() => removeClub(club.id)}
-                style={{ background: 'none', border: 'none', color: 'var(--color-t1)', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '1rem' }}
-                aria-label={`Remove ${club.name}`}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );
