@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGuestTutorial } from '../../contexts/GuestTutorialContext';
 import { supabase } from '../../lib/supabase';
@@ -58,6 +59,7 @@ const TEN_MINUTES = 10 * 60 * 1000;
 export function DiscoverPage() {
   const { user, profile, isGuest } = useAuth();
   const { tutorialStep, advanceTutorial, registerTarget, resetTutorial } = useGuestTutorial();
+  const isDesktop = useIsDesktop();
   const deckRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<FilterTriptychHandle>(null);
   const [players, setPlayers] = useState<DiscoverPlayer[]>([]);
@@ -365,27 +367,218 @@ export function DiscoverPage() {
         onSkillChange={setSkill}
       />
 
-      <div ref={deckRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, alignItems: 'center' }}>
-        <div style={{ width: '100%', maxWidth: 480, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <SwipeDeck
-            players={displayPlayers}
-            onSwipeRight={handleSwipeRight}
-            onSwipeLeft={handleSwipeLeft}
-            undoId={undoId}
-            triggerSwipe={triggerSwipe}
-            onReset={isGuest ? resetTutorial : undefined}
+      {isDesktop ? (
+        /* ── Desktop: two-panel ── */
+        <div style={{
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: '420px 1fr',
+          minHeight: 0,
+          maxWidth: 'var(--content-max-w)',
+          width: '100%',
+          margin: '0 auto',
+        }}>
+          {/* Left: swipe deck + interaction bar */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            borderRight: '1px solid var(--color-bdr)',
+            padding: '20px 24px 20px',
+            overflowY: 'auto',
+          }}>
+            <div ref={deckRef} style={{ flex: 1, minHeight: 0 }}>
+              <SwipeDeck
+                players={displayPlayers}
+                onSwipeRight={handleSwipeRight}
+                onSwipeLeft={handleSwipeLeft}
+                undoId={undoId}
+                triggerSwipe={triggerSwipe}
+                onReset={isGuest ? resetTutorial : undefined}
+              />
+            </div>
+            <InteractionBar
+              inline
+              onPass={() => topPlayer && handleSwipeLeft(topPlayer.id)}
+              onConnect={() => topPlayer && handleSwipeRight(topPlayer.id)}
+              onShuffle={handleShuffle}
+              onFavorite={handleFavorite}
+              isFavorited={!!topPlayer && favoriteIds.has(topPlayer.id)}
+              disabled={!topPlayer}
+            />
+          </div>
+
+          {/* Right: player details */}
+          <div style={{ overflowY: 'auto', padding: '24px 32px' }}>
+            {topPlayer ? (
+              <DesktopPlayerPanel player={topPlayer} />
+            ) : (
+              <div style={{
+                height: '100%', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                color: 'var(--color-t3)',
+              }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 14 }}>No more players to show</div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* ── Mobile: original layout ── */
+        <>
+          <div ref={deckRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, alignItems: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 480, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <SwipeDeck
+                players={displayPlayers}
+                onSwipeRight={handleSwipeRight}
+                onSwipeLeft={handleSwipeLeft}
+                undoId={undoId}
+                triggerSwipe={triggerSwipe}
+                onReset={isGuest ? resetTutorial : undefined}
+              />
+            </div>
+          </div>
+          <InteractionBar
+            onPass={() => topPlayer && handleSwipeLeft(topPlayer.id)}
+            onConnect={() => topPlayer && handleSwipeRight(topPlayer.id)}
+            onShuffle={handleShuffle}
+            onFavorite={handleFavorite}
+            isFavorited={!!topPlayer && favoriteIds.has(topPlayer.id)}
+            disabled={!topPlayer}
           />
+        </>
+      )}
+    </>
+  );
+}
+
+function DesktopPlayerPanel({ player }: { player: DiscoverPlayer }) {
+  const LEVEL_LABELS: Record<string, string> = {
+    beginner: 'Beginner', intermediate: 'Intermediate',
+    advanced: 'Advanced', expert: 'Expert', professional: 'Professional',
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Name + sport + compatibility */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <h2 style={{
+            fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)',
+            fontWeight: 800, color: 'var(--color-t1)', margin: 0,
+          }}>
+            {player.fullName}
+          </h2>
+          <div style={{
+            display: 'inline-block', padding: '3px 12px', borderRadius: 999,
+            background: 'var(--color-acc-bg)', color: 'var(--color-acc)',
+            fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12,
+            textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginTop: 6,
+          }}>
+            {player.sportName} · {LEVEL_LABELS[player.level] ?? player.level}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{
+            fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)',
+            fontWeight: 800, color: 'var(--color-acc)',
+          }}>
+            {player.compatibilityScore}%
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--color-t3)',
+            textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+          }}>
+            Compatible
+          </div>
         </div>
       </div>
 
-      <InteractionBar
-        onPass={() => topPlayer && handleSwipeLeft(topPlayer.id)}
-        onConnect={() => topPlayer && handleSwipeRight(topPlayer.id)}
-        onShuffle={handleShuffle}
-        onFavorite={handleFavorite}
-        isFavorited={!!topPlayer && favoriteIds.has(topPlayer.id)}
-        disabled={!topPlayer}
-      />
-    </>
+      {/* Active status */}
+      {player.isActiveRecently && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-acc)', flexShrink: 0 }} />
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t2)' }}>Looking for match today</span>
+        </div>
+      )}
+
+      {/* Play style tags */}
+      {player.playStyle && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+          {player.playStyle.split(',').map(s => (
+            <span key={s} style={{
+              padding: '4px 12px', borderRadius: 999,
+              background: 'var(--color-surf-2)', border: '1px solid var(--color-bdr)',
+              fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t2)',
+            }}>
+              {s.trim()}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Details grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+        {([
+          ['Availability', player.availability],
+          ['Preferred time', player.preferredTime],
+          ['Home club', player.homeClub],
+          ['Schedule match', player.scheduleOverlapLabel],
+        ] as const).map(([label, value]) => (
+          <div key={label}>
+            <div style={{
+              fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
+              textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--color-t3)',
+              marginBottom: 4,
+            }}>
+              {label}
+            </div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, color: 'var(--color-t1)' }}>
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: 'var(--color-bdr)' }} />
+
+      {/* Match history */}
+      <div>
+        <div style={{
+          fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
+          textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--color-t3)',
+          marginBottom: 12,
+        }}>
+          Last 5 Matches
+        </div>
+        {player.recentMatches && player.recentMatches.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {player.recentMatches.map(m => (
+              <div key={m.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px', borderRadius: 10,
+                background: 'var(--color-surf-2)',
+              }}>
+                <span style={{
+                  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13,
+                  color: m.result === 'W' ? 'var(--color-acc)' : 'var(--color-red)',
+                  width: 20,
+                }}>{m.result}</span>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t1)', flex: 1, marginLeft: 8 }}>
+                  vs {m.opponentName}
+                </span>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)' }}>
+                  {m.score}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t3)', margin: 0 }}>
+            Recently joined
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

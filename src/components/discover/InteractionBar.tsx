@@ -11,6 +11,7 @@ interface InteractionBarProps {
   canUndo?: boolean;
   isFavorited?: boolean;
   disabled?: boolean;
+  inline?: boolean;
 }
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30 };
@@ -26,23 +27,32 @@ const circleBtn: React.CSSProperties = {
 
 export function InteractionBar({
   onPass, onConnect, onUndo, onShuffle, onFavorite,
-  canUndo = false, isFavorited = false, disabled = false,
+  canUndo = false, isFavorited = false, disabled = false, inline = false,
 }: InteractionBarProps) {
+  const containerStyle: React.CSSProperties = inline
+    ? {
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '12px 0 0',
+        width: '100%',
+      }
+    : {
+        position: 'fixed',
+        bottom: 'calc(var(--interaction-bar-bottom, 83px) + 10px)',
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '0 var(--space-5)',
+      };
+
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 'calc(var(--interaction-bar-bottom, 83px) + 10px)',
-      left: 0,
-      right: 0,
-      zIndex: 100,
-      display: 'flex',
-      justifyContent: 'center',
-      padding: '0 var(--space-5)',
-    }}>
+    <div style={containerStyle}>
       {/* Inner row — constrained to match swipe deck max-width */}
       <div style={{
         width: '100%',
-        maxWidth: 480,
+        maxWidth: inline ? '100%' : 480,
         display: 'flex',
         alignItems: 'center',
         gap: 10,
