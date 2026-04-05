@@ -307,9 +307,8 @@ function AppShellContent({ children }: AppShellProps) {
       <main
         className={cn(
           'flex-1 min-h-0 overflow-y-auto overflow-x-hidden',
-          'lg:pt-16'
         )}
-        style={{ display: 'flex', flexDirection: 'column' }}
+        style={{ display: 'flex', flexDirection: 'column', paddingTop: 'var(--desktop-nav-height, 0px)' }}
       >
         {children}
       </main>

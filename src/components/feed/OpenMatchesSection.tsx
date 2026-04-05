@@ -26,13 +26,7 @@ export function OpenMatchesSection({
         onLinkClick={onSeeAllClick}
       />
       
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: 12,
-        }}
-      >
+      <div>
         {openMatches.map((openMatch) => (
           <OpenMatchCard
             key={openMatch.challenge.id}

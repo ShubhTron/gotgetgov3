@@ -40,6 +40,7 @@ build
 .kiro/specs
 screenshots
 screenshots-mobile
+docs
 
 # OS files
 Thumbs.db

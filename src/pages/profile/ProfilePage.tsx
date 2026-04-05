@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { MapPin, Trophy, ChevronRight, ClipboardList, Copy, Check, Heart } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { AvailabilityModal } from '@/components/availability';
@@ -88,6 +89,7 @@ export function ProfilePage() {
   const { profile, user, signOut, updateProfile } = useAuth();
   const { theme, toggle } = useThemeContext();
   const isDark = theme === 'dark';
+  const isDesktop = useIsDesktop();
 
   const [uploading, setUploading] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
@@ -203,30 +205,16 @@ export function ProfilePage() {
       }}
     >
       <PageContainer style={{ display: 'flex', flexDirection: 'column' }}>
-      <style>{`
-        .profile-hero {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          padding: 24px 20px 16px;
-          gap: 12px;
-        }
-        @media (min-width: 1024px) {
-          .profile-hero {
-            flex-direction: row;
-            align-items: center;
-            text-align: left;
-            gap: 24px;
-          }
-          .profile-hero-info {
-            align-items: flex-start !important;
-          }
-        }
-      `}</style>
 
       {/* ── A. Profile Hero ─────────────────────────────────────────────────── */}
-      <div className="profile-hero">
+      <div style={{
+        display: 'flex',
+        flexDirection: isDesktop ? 'row' : 'column',
+        alignItems: 'center',
+        textAlign: isDesktop ? 'left' : 'center',
+        padding: '24px 20px 16px',
+        gap: isDesktop ? 24 : 12,
+      }}>
         {/* Avatar with green ring */}
         <div style={{ position: 'relative', display: 'inline-block', flexShrink: 0 }}>
           <ImageUpload
@@ -235,7 +223,7 @@ export function ProfilePage() {
             onChange={handleAvatarChange}
             size="xl"
           />
-          {/* Decorative ring — sits outside the avatar, doesn't affect camera btn */}
+          {/* Decorative ring */}
           <div
             style={{
               position: 'absolute',
@@ -245,7 +233,6 @@ export function ProfilePage() {
               pointerEvents: 'none',
             }}
           />
-          {/* Upload spinner */}
           {uploading && (
             <div
               style={{
@@ -273,12 +260,12 @@ export function ProfilePage() {
           )}
         </div>
 
-        <div className="profile-hero-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: isDesktop ? 'flex-start' : 'center', gap: 6 }}>
           {/* Name */}
           <div
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 'var(--text-3xl)',
+              fontSize: isDesktop ? 28 : 'var(--text-3xl)',
               fontWeight: 'var(--weight-bold)',
               letterSpacing: 'var(--tracking-tight)',
               color: 'var(--color-t1)',

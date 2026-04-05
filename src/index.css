@@ -124,6 +124,7 @@ html, body {
   --content-max-w: 100%;
   --page-pb: calc(64px + env(safe-area-inset-bottom, 0px) + 16px);
   --interaction-bar-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  --desktop-nav-height: 0px;
 }
 
 @media (min-width: 768px) {
@@ -137,6 +138,7 @@ html, body {
     --content-max-w: 860px;
     --page-pb: 24px;
     --interaction-bar-bottom: 16px;
+    --desktop-nav-height: 64px;
   }
 }
 

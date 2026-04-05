@@ -368,25 +368,23 @@ export function DiscoverPage() {
       />
 
       {isDesktop ? (
-        /* ── Desktop: two-panel ── */
+        /* ── Desktop: two-panel (full width) ── */
         <div style={{
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: '420px 1fr',
+          gridTemplateColumns: '400px 1fr',
           minHeight: 0,
-          maxWidth: 'var(--content-max-w)',
           width: '100%',
-          margin: '0 auto',
         }}>
           {/* Left: swipe deck + interaction bar */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             borderRight: '1px solid var(--color-bdr)',
-            padding: '20px 24px 20px',
-            overflowY: 'auto',
+            padding: '16px 20px',
+            overflow: 'hidden',
           }}>
-            <div ref={deckRef} style={{ flex: 1, minHeight: 0 }}>
+            <div ref={deckRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <SwipeDeck
                 players={displayPlayers}
                 onSwipeRight={handleSwipeRight}
@@ -408,16 +406,17 @@ export function DiscoverPage() {
           </div>
 
           {/* Right: player details */}
-          <div style={{ overflowY: 'auto', padding: '24px 32px' }}>
+          <div style={{ overflowY: 'auto', padding: '24px 28px' }}>
             {topPlayer ? (
               <DesktopPlayerPanel player={topPlayer} />
             ) : (
               <div style={{
                 height: '100%', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
+                alignItems: 'center', justifyContent: 'center', gap: 12,
                 color: 'var(--color-t3)',
               }}>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 14 }}>No more players to show</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, fontWeight: 500 }}>No more players nearby</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t3)' }}>Adjust your filters to see more</div>
               </div>
             )}
           </div>
@@ -457,57 +456,104 @@ function DesktopPlayerPanel({ player }: { player: DiscoverPlayer }) {
     advanced: 'Advanced', expert: 'Expert', professional: 'Professional',
   };
 
+  const initials = player.fullName
+    ? player.fullName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Name + sport + compatibility */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* ── Header: avatar + name + score ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {/* Avatar */}
+        <div style={{
+          width: 64, height: 64, borderRadius: '50%', flexShrink: 0,
+          background: player.avatarUrl ? 'transparent' : 'var(--color-acc-bg)',
+          border: '2px solid var(--color-bdr)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
+          {player.avatarUrl ? (
+            <img src={player.avatarUrl} alt={player.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{
+              fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700,
+              color: 'var(--color-acc)',
+            }}>{initials}</span>
+          )}
+        </div>
+
+        {/* Name + sport pill */}
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{
-            fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)',
-            fontWeight: 800, color: 'var(--color-t1)', margin: 0,
+            fontFamily: 'var(--font-display)', fontSize: 22,
+            fontWeight: 800, color: 'var(--color-t1)', margin: 0, lineHeight: 1.2,
           }}>
             {player.fullName}
           </h2>
-          <div style={{
-            display: 'inline-block', padding: '3px 12px', borderRadius: 999,
-            background: 'var(--color-acc-bg)', color: 'var(--color-acc)',
-            fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12,
-            textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginTop: 6,
-          }}>
-            {player.sportName} · {LEVEL_LABELS[player.level] ?? player.level}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+            <span style={{
+              display: 'inline-block', padding: '3px 10px', borderRadius: 999,
+              background: 'var(--color-acc-bg)', color: 'var(--color-acc)',
+              fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 11,
+              textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+            }}>
+              {player.sportName}
+            </span>
+            <span style={{
+              fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)',
+            }}>
+              {LEVEL_LABELS[player.level] ?? player.level}
+            </span>
+            {player.isActiveRecently && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-acc)', display: 'inline-block' }} />
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--color-acc)' }}>Active now</span>
+              </span>
+            )}
           </div>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{
-            fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)',
-            fontWeight: 800, color: 'var(--color-acc)',
+
+        {/* Compatibility badge */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          background: 'var(--color-acc-bg)', borderRadius: 14,
+          padding: '10px 16px', flexShrink: 0,
+        }}>
+          <span style={{
+            fontFamily: 'var(--font-display)', fontSize: 24,
+            fontWeight: 800, color: 'var(--color-acc)', lineHeight: 1,
           }}>
             {player.compatibilityScore}%
-          </div>
-          <div style={{
-            fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--color-t3)',
-            textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+          </span>
+          <span style={{
+            fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--color-acc)',
+            fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+            marginTop: 3, opacity: 0.8,
           }}>
-            Compatible
-          </div>
+            Match
+          </span>
         </div>
       </div>
 
-      {/* Active status */}
-      {player.isActiveRecently && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-acc)', flexShrink: 0 }} />
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t2)' }}>Looking for match today</span>
+      {/* ── Compatibility bar ── */}
+      <div>
+        <div style={{ height: 4, borderRadius: 999, background: 'var(--color-surf-2)', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', borderRadius: 999,
+            width: `${player.compatibilityScore}%`,
+            background: `linear-gradient(90deg, var(--color-acc) 0%, var(--color-acc-dk) 100%)`,
+            transition: 'width 0.6s ease',
+          }} />
         </div>
-      )}
+      </div>
 
-      {/* Play style tags */}
+      {/* ── Play style tags ── */}
       {player.playStyle && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-          {player.playStyle.split(',').map(s => (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+          {player.playStyle.split(',').map((s: string) => (
             <span key={s} style={{
               padding: '4px 12px', borderRadius: 999,
-              background: 'var(--color-surf-2)', border: '1px solid var(--color-bdr)',
+              background: 'var(--color-surf)', border: '1px solid var(--color-bdr)',
               fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t2)',
             }}>
               {s.trim()}
@@ -516,67 +562,77 @@ function DesktopPlayerPanel({ player }: { player: DiscoverPlayer }) {
         </div>
       )}
 
-      {/* Details grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+      {/* ── Stats grid ── */}
+      <div style={{
+        background: 'var(--color-surf)',
+        borderRadius: 14, padding: '16px 20px',
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 20px',
+      }}>
         {([
           ['Availability', player.availability],
           ['Preferred time', player.preferredTime],
           ['Home club', player.homeClub],
-          ['Schedule match', player.scheduleOverlapLabel],
+          ['Schedule overlap', player.scheduleOverlapLabel],
         ] as const).map(([label, value]) => (
           <div key={label}>
             <div style={{
               fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
               textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--color-t3)',
-              marginBottom: 4,
+              marginBottom: 3,
             }}>
               {label}
             </div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 600, color: 'var(--color-t1)' }}>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600, color: 'var(--color-t1)' }}>
               {value}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Divider */}
-      <div style={{ height: 1, background: 'var(--color-bdr)' }} />
-
-      {/* Match history */}
+      {/* ── Match history ── */}
       <div>
         <div style={{
           fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
           textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--color-t3)',
-          marginBottom: 12,
+          marginBottom: 10,
         }}>
           Last 5 Matches
         </div>
         {player.recentMatches && player.recentMatches.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {player.recentMatches.map(m => (
               <div key={m.id} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                display: 'flex', alignItems: 'center',
                 padding: '8px 12px', borderRadius: 10,
-                background: 'var(--color-surf-2)',
+                background: 'var(--color-surf)',
+                border: '1px solid var(--color-bdr)',
               }}>
                 <span style={{
-                  fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13,
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: m.result === 'W' ? 'rgba(22,212,106,0.12)' : 'rgba(239,68,68,0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 11,
                   color: m.result === 'W' ? 'var(--color-acc)' : 'var(--color-red)',
-                  width: 20,
+                  flexShrink: 0,
                 }}>{m.result}</span>
-                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t1)', flex: 1, marginLeft: 8 }}>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t1)', flex: 1, marginLeft: 10 }}>
                   vs {m.opponentName}
                 </span>
-                <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)' }}>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--color-t3)', fontVariantNumeric: 'tabular-nums' }}>
                   {m.score}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t3)', margin: 0 }}>
-            Recently joined
-          </p>
+          <div style={{
+            padding: '14px 16px', borderRadius: 10,
+            background: 'var(--color-surf)', border: '1px solid var(--color-bdr)',
+          }}>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--color-t3)', margin: 0 }}>
+              Recently joined — no match history yet
+            </p>
+          </div>
         )}
       </div>
     </div>
