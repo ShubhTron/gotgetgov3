@@ -561,6 +561,7 @@ export function OnboardingPage() {
             <button className={`ob-cta${btnPressed ? ' pressed' : ''}`} onClick={handleNext} disabled={
               loading ||
               (step === 'roles' && data.selectedRoles.length === 0) ||
+              (step === 'location_club' && data.selectedClubs.length === 0) ||
               (step === 'coach_sports' && data.coachSports.length === 0)
             }>
               {loading ? <div className="ob-spinner" /> : <span>{isLastStep ? 'Complete Setup' : 'Continue'}</span>}
@@ -1310,10 +1311,11 @@ function CoachLessonsStep({ data, setData }: StepProps) {
 
 function LocationClubStep({ data, setData, user }: CoachStepProps) {
   const [query, setQuery] = useState('');
-  const [selectedClub, setSelectedClub] = useState<SelectedClubWithRole | null>(null);
-  const [membershipRole, setMembershipRole] = useState<ClubRole>('player');
   const [createError, setCreateError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const defaultRole: ClubRole = data.selectedRoles.includes('coach') ? 'coach'
+    : data.selectedRoles.includes('club_admin') ? 'club_admin'
+    : 'player';
   const { results, loading } = useClubSearch(
     query,
     data.locationLat,
@@ -1335,28 +1337,15 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
     );
   }, []);
 
-  const confirmClub = () => {
-    if (!selectedClub) return;
-    if (!data.selectedClubs.some(c => c.id === selectedClub.id)) {
-      setData(prev => ({
-        ...prev,
-        selectedClubs: [...prev.selectedClubs, { ...selectedClub, membershipRole }],
-      }));
-    }
-    setSelectedClub(null);
-    setQuery('');
-    setMembershipRole('player');
+  const toggleClub = (club: SelectedClub) => {
+    const already = data.selectedClubs.some(c => c.id === club.id);
+    setData(prev => ({
+      ...prev,
+      selectedClubs: already
+        ? prev.selectedClubs.filter(c => c.id !== club.id)
+        : [...prev.selectedClubs, { ...club, membershipRole: defaultRole }],
+    }));
   };
-
-  const removeClub = (clubId: string) => {
-    setData(prev => ({ ...prev, selectedClubs: prev.selectedClubs.filter(c => c.id !== clubId) }));
-  };
-
-  // Membership role options = intersection of {player, coach, club_admin} with selectedRoles,
-  // always including 'player'
-  const membershipOptions: ClubRole[] = ['player'];
-  if (data.selectedRoles.includes('coach')) membershipOptions.push('coach');
-  if (data.selectedRoles.includes('club_admin')) membershipOptions.push('club_admin');
 
   const createClub = async () => {
     const name = query.trim();
@@ -1372,7 +1361,7 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
       return;
     }
     if (newClub) {
-      setSelectedClub(newClub as SelectedClubWithRole);
+      toggleClub(newClub as SelectedClub);
       setQuery('');
     }
   };
@@ -1441,15 +1430,49 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
 
       {!loading && results.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {results.map(club => (
-            <button
-              key={club.id}
-              className="ob-club-result"
-              onClick={() => setSelectedClub(club as SelectedClubWithRole)}
-            >
-              {club.name}
-            </button>
-          ))}
+          {results.map(club => {
+            const isSelected = data.selectedClubs.some(c => c.id === club.id);
+            return (
+              <motion.button
+                key={club.id}
+                className="ob-role-row"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: isSelected ? 'var(--color-acc-bg)' : 'var(--color-surf)',
+                  border: `1px solid ${isSelected ? 'var(--color-acc)' : 'var(--color-bdr)'}`,
+                  borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
+                  width: '100%', textAlign: 'left',
+                }}
+                onClick={() => toggleClub(club)}
+                animate={isSelected ? { scale: [1, 0.97, 1.01, 1] } : { scale: 1 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <div>
+                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.92rem', color: 'var(--color-t1)' }}>
+                    {club.name}
+                  </span>
+                  {(club.city || club.state) && (
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: 'var(--color-t3)', display: 'block', marginTop: 2 }}>
+                      {[club.city, club.state].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                </div>
+                <AnimatePresence>
+                  {isSelected && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: [0.34, 1.56, 0.64, 1] }}
+                      style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--color-acc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >
+                      <Check size={13} color="var(--color-bg)" strokeWidth={3} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            );
+          })}
         </div>
       )}
 
@@ -1460,53 +1483,6 @@ function LocationClubStep({ data, setData, user }: CoachStepProps) {
         >
           + Create "{query.trim()}"
         </button>
-      )}
-
-      {selectedClub && (
-        <div style={{ background: 'var(--color-acc-bg)', border: '1px solid var(--color-bdr)', borderRadius: 12, padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-t2)', margin: 0 }}>
-            {selectedClub.name} — Join as
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {membershipOptions.map(role => (
-              <button
-                key={role}
-                className={`ob-skill-btn${membershipRole === role ? ' active' : ''}`}
-                onClick={() => setMembershipRole(role)}
-              >
-                {role === 'club_admin' ? 'Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
-              </button>
-            ))}
-          </div>
-          <button
-            className="ob-skill-btn active"
-            style={{ alignSelf: 'flex-start', padding: '10px 20px' }}
-            onClick={confirmClub}
-          >
-            Confirm
-          </button>
-        </div>
-      )}
-
-      {data.selectedClubs.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-          {data.selectedClubs.map(club => (
-            <div
-              key={club.id}
-              className="ob-club-chip"
-              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-            >
-              <span>{club.name}</span>
-              <button
-                onClick={() => removeClub(club.id)}
-                style={{ background: 'none', border: 'none', color: 'var(--color-t1)', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '1rem' }}
-                aria-label={`Remove ${club.name}`}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );
